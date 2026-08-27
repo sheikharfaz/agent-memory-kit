@@ -1,0 +1,15 @@
+# Generated index — the kit repo does not ship one.
+.agent/memory/
+.agent/work/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
