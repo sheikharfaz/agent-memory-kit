@@ -21,8 +21,8 @@ provider's pricing bills against — not model behaviour or answer quality.
 
 | Repo | Files (parsed) | Symbols | Index build | `CODEBASE_MAP.md` | Naive tokens (4 questions) | Kit-assisted tokens | Ratio |
 |---|---|---|---|---|---|---|---|
-| [psf/requests](https://github.com/psf/requests) | 118 (37) | 797 | 0.22s | 1,051 | 85,220 | 1,667 | **51.1x** |
-| [django/django](https://github.com/django/django) | 6,904 (2,979) | 43,170 | 4.43s | 2,912 | 167,437 | 4,631 | **36.2x** |
+| [psf/requests](https://github.com/psf/requests) | 118 (37) | 797 | 0.17s | 1,034 | 85,220 | 1,566 | **54.4x** |
+| [django/django](https://github.com/django/django) | 6,904 (2,979) | 43,170 | 3.76s | 2,893 | 167,437 | 4,506 | **37.2x** |
 
 Raw output: [`results/requests.json`](results/requests.json) ·
 [`results/django.json`](results/django.json) ·
@@ -35,7 +35,7 @@ Raw output: [`results/requests.json`](results/requests.json) ·
 |---|---|---|
 | Where is the `QuerySet` class defined? | 30,423 | 16 |
 | What calls `force_str`? | 52,543 | 252 |
-| What does `db/models/query.py` contain and depend on? | 30,408 | 472 |
+| What does `db/models/query.py` contain and depend on? | 30,408 | 366 |
 | What breaks if `db/models/base.py` changes? | 54,063 | 979 |
 
 The fourth question is the most telling: `codebase-memory` reports the real

@@ -2,7 +2,7 @@
   "repo": "psf/requests",
   "counter": "chars/4 heuristic (tiktoken not installed)",
   "build_seconds": null,
-  "codebase_map_tokens": 1051,
+  "codebase_map_tokens": 1034,
   "questions": [
     {
       "id": "def-session",
@@ -26,7 +26,7 @@
       "kind": "file",
       "naive_tokens": 8518,
       "naive_files_read": 1,
-      "kit_tokens": 315
+      "kit_tokens": 231
     },
     {
       "id": "impact-models",
@@ -39,7 +39,7 @@
   ],
   "totals": {
     "naive_tokens": 85220,
-    "kit_tokens": 1667,
-    "kit_tokens_excl_map": 616
+    "kit_tokens": 1566,
+    "kit_tokens_excl_map": 532
   }
 }

@@ -3,9 +3,9 @@
 kind       question                                      naive tokens   kit tokens
 def        Where is the QuerySet class defined?                 30423           16
 callers    What uses/calls force_str?                           52543          252
-file       What does db/models/query.py contain and depe        30408          472
+file       What does db/models/query.py contain and depe        30408          366
 impact     What breaks if db/models/base.py changes?            54063          979
 
 TOTAL (naive):                167437 tokens
-TOTAL (kit, map read once):   4631 tokens (2912 map + 1719 queries)
-ratio: naive used 36.2x more tokens than the kit-assisted session
+TOTAL (kit, map read once):   4506 tokens (2893 map + 1613 queries)
+ratio: naive used 37.2x more tokens than the kit-assisted session

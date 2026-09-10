@@ -190,8 +190,8 @@ A reproducible token comparison against two real, public repositories —
 
 | Repo | Naive tokens | Kit-assisted tokens | Ratio |
 |---|---|---|---|
-| psf/requests (37 parsed files) | 85,220 | 1,667 | **51.1x** |
-| django/django (2,979 parsed files) | 167,437 | 4,631 | **36.2x** |
+| psf/requests (37 parsed files) | 85,220 | 1,566 | **54.4x** |
+| django/django (2,979 parsed files) | 167,437 | 4,506 | **37.2x** |
 
 ```bash
 python3 benchmarks/token_comparison.py --repo /path/to/any/repo --spec benchmarks/specs/django.json

@@ -2,7 +2,7 @@
   "repo": "django/django",
   "counter": "chars/4 heuristic (tiktoken not installed)",
   "build_seconds": null,
-  "codebase_map_tokens": 2912,
+  "codebase_map_tokens": 2893,
   "questions": [
     {
       "id": "def-queryset",
@@ -26,7 +26,7 @@
       "kind": "file",
       "naive_tokens": 30408,
       "naive_files_read": 1,
-      "kit_tokens": 472
+      "kit_tokens": 366
     },
     {
       "id": "impact-base",
@@ -39,7 +39,7 @@
   ],
   "totals": {
     "naive_tokens": 167437,
-    "kit_tokens": 4631,
-    "kit_tokens_excl_map": 1719
+    "kit_tokens": 4506,
+    "kit_tokens_excl_map": 1613
   }
 }
