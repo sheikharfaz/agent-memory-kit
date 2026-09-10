@@ -133,7 +133,7 @@ def cmd_def(g, args):
     rows = g.syms_named(args.name, exact=not args.fuzzy)
     emit(args, rows, lambda s: "%s:%d  %-9s %s   %s"
          % (s["p"], s["l"], s["k"], s["n"], s["sig"][:90]))
-    if not rows:
+    if not rows and not args.json:
         print("no symbol named %r in the index. It may be dynamically generated, "
               "in an unparsed file, or spelled differently — try `search` with a "
               "pattern, or grep the paths `coverage` reports as unparsed."
@@ -143,13 +143,17 @@ def cmd_def(g, args):
 def cmd_callers(g, args):
     ids = {s["id"] for s in g.syms_named(args.name, exact=not args.fuzzy)}
     if not ids:
-        print("no such symbol in the index: %r" % args.name)
+        if args.json:
+            print(json.dumps([]))
+        else:
+            print("no such symbol in the index: %r" % args.name)
         return
     rows = sorted({e["s"] for e in g.edges("CALLS") if e["d"] in ids})
     emit(args, rows, lambda p: "  %s" % p)
-    print("%d file(s) reference %r." % (len(rows), args.name))
-    print("Unresolved-by-design: call sites whose name is ambiguous across files "
-          "are not recorded. Treat this as a strong lead, not an exhaustive list.")
+    if not args.json:
+        print("%d file(s) reference %r." % (len(rows), args.name))
+        print("Unresolved-by-design: call sites whose name is ambiguous across files "
+              "are not recorded. Treat this as a strong lead, not an exhaustive list.")
 
 
 def cmd_callees(g, args):
@@ -169,7 +173,8 @@ def cmd_search(g, args):
         if rx.search(s["n"]):
             rows.append(s)
     emit(args, rows, lambda s: "%s:%d  %-9s %s" % (s["p"], s["l"], s["k"], s["n"]))
-    print("%d match(es)." % len(rows))
+    if not args.json:
+        print("%d match(es)." % len(rows))
 
 
 def cmd_file(g, args):
@@ -198,7 +203,8 @@ def cmd_importers(g, args):
     rows = sorted({e["s"] for e in g.edges("IMPORTS")
                    if e["d"] == t or e["d"].endswith("/" + t) or t in e["d"]})
     emit(args, rows, lambda p: "  %s" % p)
-    print("%d file(s) import something matching %r." % (len(rows), t))
+    if not args.json:
+        print("%d file(s) import something matching %r." % (len(rows), t))
 
 
 def cmd_routes(g, args):
@@ -206,7 +212,8 @@ def cmd_routes(g, args):
     rows = [(e["d"], e["s"]) for e in g.edges("EXPOSES") if pat in e["d"]]
     rows.sort()
     emit(args, rows, lambda r: "  %-40s %s" % (r[0], r[1]))
-    print("%d route(s)." % len(rows))
+    if not args.json:
+        print("%d route(s)." % len(rows))
 
 
 def cmd_impact(g, args):
@@ -292,11 +299,12 @@ def cmd_orphans(g, args):
             continue
         rows.append(s)
     emit(args, rows, lambda s: "%s:%d  %-9s %s" % (s["p"], s["l"], s["k"], s["n"]))
-    print("%d symbol(s) with no recorded caller." % len(rows))
-    print("WARNING: this is a lead list, not a delete list. Entry points, exported "
-          "APIs, dynamic dispatch, reflection, DI containers, and cross-language "
-          "calls all look identical to dead code here. Verify each one before "
-          "touching it.")
+    if not args.json:
+        print("%d symbol(s) with no recorded caller." % len(rows))
+        print("WARNING: this is a lead list, not a delete list. Entry points, exported "
+              "APIs, dynamic dispatch, reflection, DI containers, and cross-language "
+              "calls all look identical to dead code here. Verify each one before "
+              "touching it.")
 
 
 def cmd_stats(g, args):
@@ -384,13 +392,24 @@ def cmd_drift(g, args):
 # ------------------------------------------------------------------- main ---
 
 def main():
+    # These three flags are documented as working on either side of the verb
+    # ("query.py --root X def Y" and "query.py def Y --root X" must both
+    # work). argparse's subparsers re-parse remaining args into the SAME
+    # namespace the top-level parser already populated, so a subparser copy
+    # of these flags with a real default would silently clobber a value the
+    # top-level parser already set when the flag appears before the verb.
+    # SUPPRESS on the subparser copies means "leave the namespace alone if
+    # this wasn't given here" -- the top-level parser is the only one that
+    # ever sets a real default, so the merge is correct in both orderings.
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--root", default=".")
-    common.add_argument("--json", action="store_true")
-    common.add_argument("--limit", type=int, default=40)
+    common.add_argument("--root", default=argparse.SUPPRESS)
+    common.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+    common.add_argument("--limit", type=int, default=argparse.SUPPRESS)
 
-    ap = argparse.ArgumentParser(description="Query the local codebase graph",
-                                 parents=[common])
+    ap = argparse.ArgumentParser(description="Query the local codebase graph")
+    ap.add_argument("--root", default=".")
+    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--limit", type=int, default=40)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     def add(name, fn, *pos, **kw):

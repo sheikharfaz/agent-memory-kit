@@ -36,8 +36,14 @@ SHARD_SYMBOL_LIMIT = 400
 
 # ---------------------------------------------------------------- discovery --
 
+# .agent/memory/ specifically (this indexer's own generated output, plus
+# session-memory/tool-provisioning/dev-recap's local logs) is excluded by
+# path prefix in discover()/walk_files() below, NOT by name here -- a
+# name-based deny on plain ".agent" would also hide .agent/skills/ (this
+# kit's own hand-written source) and .agent/work/ (PRD/TRD/research docs),
+# which are real content, not generated output.
 HARD_DENY_DIRS = {
-    ".git", ".hg", ".svn", ".agent", "node_modules", "bower_components",
+    ".git", ".hg", ".svn", "node_modules", "bower_components",
     "vendor", "venv", ".venv", "env", "virtualenv", "__pycache__", ".mypy_cache",
     ".pytest_cache", ".ruff_cache", ".tox", ".nox", ".gradle", ".idea", ".vs",
     ".vscode-test", "dist", "build", "out", "target", "bin", "obj", "coverage",
@@ -190,14 +196,26 @@ def git_files(root):
     return [l for l in out.splitlines() if l]
 
 
+def _under_agent_memory(rel):
+    return rel == ".agent/memory" or rel.startswith(".agent/memory/")
+
+
 def walk_files(root):
     acc = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(
-            d for d in dirnames
-            if d not in HARD_DENY_DIRS and not d.startswith(".")
-            or d in (".github", ".gitlab")
-        )
+        rel_dir = os.path.relpath(dirpath, root).replace("\\", "/")
+
+        def keep_dir(d):
+            child = d if rel_dir == "." else "%s/%s" % (rel_dir, d)
+            if _under_agent_memory(child):
+                return False
+            if d in (".github", ".gitlab"):
+                return True
+            if d in HARD_DENY_DIRS or d.startswith("."):
+                return False
+            return True
+
+        dirnames[:] = sorted(d for d in dirnames if keep_dir(d))
         for fn in sorted(filenames):
             full = os.path.join(dirpath, fn)
             acc.append(os.path.relpath(full, root).replace("\\", "/"))
@@ -212,6 +230,8 @@ def discover(root, extra_ignores):
     keep = []
     for rel in files:
         rel = rel.replace("\\", "/")
+        if _under_agent_memory(rel):
+            continue
         parts = rel.split("/")
         if any(p in HARD_DENY_DIRS for p in parts[:-1]):
             continue

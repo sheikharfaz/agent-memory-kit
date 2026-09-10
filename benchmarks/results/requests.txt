@@ -1,0 +1,11 @@
+== psf/requests (chars/4 heuristic (tiktoken not installed)) ==
+
+kind       question                                      naive tokens   kit tokens
+def        Where is the Session class defined?                   8535           16
+callers    What uses/calls Session?                             47325           74
+file       What does sessions.py contain and depend on?          8518          315
+impact     What breaks if models.py changes?                    20842          211
+
+TOTAL (naive):                85220 tokens
+TOTAL (kit, map read once):   1939 tokens (1323 map + 616 queries)
+ratio: naive used 44.0x more tokens than the kit-assisted session

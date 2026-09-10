@@ -5,6 +5,37 @@ package registry exists for this kit (it's copied via `install.sh`/
 `install.ps1`/`install.py`), so "release" means a tagged commit a team can
 pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
 
+## [Unreleased]
+
+### Added
+- `benchmarks/`: a reproducible token comparison (`token_comparison.py`)
+  measuring how many tokens an agent spends answering four "getting
+  oriented" questions against a real repo, with `codebase-memory` versus a
+  grep-and-read naive baseline. Run against `psf/requests` and
+  `django/django`; results and full methodology in `benchmarks/README.md`,
+  summarized in the main README's new "Proof" section.
+
+### Fixed
+- `query.py`: `--root <path>` (and `--json`/`--limit`) silently reset to
+  their defaults when placed *before* the verb (e.g.
+  `query.py --root X def Y` ignored `--root`) -- argparse's subparsers
+  re-parse into the same namespace the top-level parser already populated,
+  and a shared flag definition on both levels let the subparser's default
+  clobber a value already set. Found via the benchmarks script, which
+  calls verbs exactly this way.
+- `index.py`: `.agent` was a blanket hard-denied directory name, which also
+  hid `.agent/skills/` (hand-written source -- every skill in this kit
+  lives there) and `.agent/work/` (PRD/TRD/research docs) from the index,
+  not just the intended target, `.agent/memory/` (generated output plus
+  session-memory/tool-provisioning/dev-recap's local logs). Exclusion is
+  now a path-prefix check scoped to `.agent/memory/` specifically. Found by
+  running this kit's own benchmark against its own repo and noticing the
+  map only saw 27 files where ~44 were expected.
+- `query.py`: several verbs (`def`, `callers`, `search`, `importers`,
+  `routes`, `orphans`) printed a trailing human-readable summary/caveat
+  line even when `--json` was set, producing output that wasn't valid JSON
+  for a machine consumer. Now suppressed under `--json`.
+
 ## [0.2.0] — 2026-09-10
 
 ### Added

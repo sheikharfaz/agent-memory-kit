@@ -1,0 +1,14 @@
+{
+  "repo": "psf/requests",
+  "clone": "https://github.com/psf/requests.git",
+  "questions": [
+    {"id": "def-session", "kind": "def", "symbol": "Session",
+     "question": "Where is the Session class defined?"},
+    {"id": "callers-session", "kind": "callers", "symbol": "Session",
+     "question": "What uses/calls Session?"},
+    {"id": "file-sessions", "kind": "file", "path": "src/requests/sessions.py",
+     "question": "What does sessions.py contain and depend on?"},
+    {"id": "impact-models", "kind": "impact", "path": "src/requests/models.py",
+     "question": "What breaks if models.py changes?"}
+  ]
+}

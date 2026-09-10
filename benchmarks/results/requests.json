@@ -1,0 +1,45 @@
+{
+  "repo": "psf/requests",
+  "counter": "chars/4 heuristic (tiktoken not installed)",
+  "build_seconds": 0.15,
+  "codebase_map_tokens": 1323,
+  "questions": [
+    {
+      "id": "def-session",
+      "question": "Where is the Session class defined?",
+      "kind": "def",
+      "naive_tokens": 8535,
+      "naive_files_read": 1,
+      "kit_tokens": 16
+    },
+    {
+      "id": "callers-session",
+      "question": "What uses/calls Session?",
+      "kind": "callers",
+      "naive_tokens": 47325,
+      "naive_files_read": 4,
+      "kit_tokens": 74
+    },
+    {
+      "id": "file-sessions",
+      "question": "What does sessions.py contain and depend on?",
+      "kind": "file",
+      "naive_tokens": 8518,
+      "naive_files_read": 1,
+      "kit_tokens": 315
+    },
+    {
+      "id": "impact-models",
+      "question": "What breaks if models.py changes?",
+      "kind": "impact",
+      "naive_tokens": 20842,
+      "naive_files_read": 6,
+      "kit_tokens": 211
+    }
+  ],
+  "totals": {
+    "naive_tokens": 85220,
+    "kit_tokens": 1939,
+    "kit_tokens_excl_map": 616
+  }
+}

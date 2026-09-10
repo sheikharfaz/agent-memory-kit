@@ -1,0 +1,45 @@
+{
+  "repo": "django/django",
+  "counter": "chars/4 heuristic (tiktoken not installed)",
+  "build_seconds": 4.13,
+  "codebase_map_tokens": 2987,
+  "questions": [
+    {
+      "id": "def-queryset",
+      "question": "Where is the QuerySet class defined?",
+      "kind": "def",
+      "naive_tokens": 30423,
+      "naive_files_read": 1,
+      "kit_tokens": 16
+    },
+    {
+      "id": "callers-force_str",
+      "question": "What uses/calls force_str?",
+      "kind": "callers",
+      "naive_tokens": 52543,
+      "naive_files_read": 6,
+      "kit_tokens": 252
+    },
+    {
+      "id": "file-query",
+      "question": "What does db/models/query.py contain and depend on?",
+      "kind": "file",
+      "naive_tokens": 30408,
+      "naive_files_read": 1,
+      "kit_tokens": 472
+    },
+    {
+      "id": "impact-base",
+      "question": "What breaks if db/models/base.py changes?",
+      "kind": "impact",
+      "naive_tokens": 54063,
+      "naive_files_read": 6,
+      "kit_tokens": 979
+    }
+  ],
+  "totals": {
+    "naive_tokens": 167437,
+    "kit_tokens": 4706,
+    "kit_tokens_excl_map": 1719
+  }
+}

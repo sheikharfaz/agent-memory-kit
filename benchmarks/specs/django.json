@@ -1,0 +1,14 @@
+{
+  "repo": "django/django",
+  "clone": "https://github.com/django/django.git",
+  "questions": [
+    {"id": "def-queryset", "kind": "def", "symbol": "QuerySet",
+     "question": "Where is the QuerySet class defined?"},
+    {"id": "callers-force_str", "kind": "callers", "symbol": "force_str",
+     "question": "What uses/calls force_str?"},
+    {"id": "file-query", "kind": "file", "path": "django/db/models/query.py",
+     "question": "What does db/models/query.py contain and depend on?"},
+    {"id": "impact-base", "kind": "impact", "path": "django/db/models/base.py",
+     "question": "What breaks if db/models/base.py changes?"}
+  ]
+}

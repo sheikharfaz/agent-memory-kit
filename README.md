@@ -11,6 +11,7 @@
 [Who it's for](#who-its-for) ·
 [Requirements](#requirements) ·
 [Quick start](#quick-start) ·
+[Proof](#proof) ·
 [Enterprise readiness](#enterprise-readiness) ·
 [Security](SECURITY.md) ·
 [Documentation](#documentation)
@@ -179,6 +180,28 @@ composing into one lifecycle rather than five separate tools bolted together:
 
 Reference numbers from the test suite: 286k LOC indexed in 2.0s single-threaded,
 producing a 1,650-token map. Structural queries return in ~0.1s.
+
+## Proof
+
+A reproducible token comparison against two real, public repositories —
+[`psf/requests`](https://github.com/psf/requests) and
+[`django/django`](https://github.com/django/django) — running the same four
+"getting oriented" questions with and without `codebase-memory`:
+
+| Repo | Naive tokens | Kit-assisted tokens | Ratio |
+|---|---|---|---|
+| psf/requests (37 parsed files) | 85,220 | 1,939 | **44.0x** |
+| django/django (2,979 parsed files) | 167,437 | 4,706 | **35.6x** |
+
+```bash
+python3 benchmarks/token_comparison.py --repo /path/to/any/repo --spec benchmarks/specs/django.json
+```
+
+No LLM calls, nothing hidden — full methodology, the exact grep-and-read
+naive baseline it's measured against, honest limitations (the naive
+baseline is capped at 6 files read per question, which understates its
+true cost — these ratios are a floor, not a ceiling), and raw JSON output:
+[`benchmarks/README.md`](benchmarks/README.md).
 
 ---
 
