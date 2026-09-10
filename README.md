@@ -1,6 +1,57 @@
 # agent-memory-kit
 
+**Give your AI coding assistant a memory, a spine, and good manners.**
+
 [![CI](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml)
+
+## What is this, in plain English?
+
+When you use an AI coding assistant on a real project, a few things tend to
+go wrong. It re-explores the whole codebase from scratch every time you ask
+it something, burning time before it's answered anything. It forgets what
+you talked about the moment you close the chat, so you end up re-explaining
+yourself constantly. It jumps straight into writing code without checking
+what you actually meant — "vibe coding." It installs things on your
+computer without asking. And it hands you a finished piece of code that
+*it* understands but *you* never really did, which is a problem, because
+you're the one who has to maintain it afterwards.
+
+**agent-memory-kit is a handful of files you copy into a code project that
+fixes all five of those, at once.** Think of it like handing a brilliant
+but forgetful new hire a company handbook, a notebook, and a habit of
+checking in before they do anything risky — except the "new hire" is your
+AI assistant, and the notebook is a folder on your own machine, not a
+server anywhere. Nothing to install as a service, nothing to sign up for,
+no data leaving your computer.
+
+## Who it's for
+
+- **Developers** who use an AI coding assistant daily and are tired of
+  re-explaining the same context every session — or a little worried they
+  don't actually understand all the code that's shipped in their name.
+- **Engineering leads, IT, and security teams**, especially at companies
+  where employees can't freely install software, who want AI-assisted
+  coding to be safe, auditable, and not require a procurement process of
+  its own.
+- **Anyone asking "is it actually safe to let AI write code here"** — this
+  kit is built to answer that question honestly; see
+  [SECURITY.md](SECURITY.md) for the full, plain-language case.
+
+## What you get, one line each
+
+| It gives your AI assistant... | So that... |
+|---|---|
+| A map of your codebase | It answers questions correctly instead of guessing file names that don't exist |
+| A memory that survives closing the chat | You stop re-explaining the same thing every new session |
+| A habit of asking before installing anything | Nothing gets put on your machine without your say-so |
+| A habit of planning before it codes | It writes down *what* it's building and *why*, before touching a single file |
+| A habit of explaining its own work | You actually understand what shipped, instead of just trusting it |
+
+If none of that sounds like your problem, the rest of this README goes
+deep on how it works. If it does, the [Quick start](#quick-start) below
+takes about a minute.
+
+---
 
 A drop-in `AGENTS.md` contract, a local codebase index, and four focused
 companion skills — cross-session continuity, propose-only tool access, a
