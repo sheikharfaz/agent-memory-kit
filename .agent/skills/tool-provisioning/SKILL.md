@@ -15,6 +15,16 @@ this skill is that policy made concrete and auditable, not an exception to it.
 
 ## Workflow
 
+0. **On a network you're not sure about, run `doctor` first.** Read-only,
+   probes nothing more than a TCP handshake:
+   ```bash
+   python .agent/skills/tool-provisioning/toolkit.py doctor
+   ```
+   Reports whether PyPI/npm (or a configured mirror) are actually reachable,
+   what proxy env vars are set, and what CLIs (`pip`, `npm`, `claude`, `gh`)
+   exist -- so "the install will probably fail" is established in seconds
+   instead of discovered after `install` fails, and instead of assuming the
+   task is blocked and asking the developer to file an IT ticket.
 1. **search** for what the task needs, by free text:
    ```bash
    python .agent/skills/tool-provisioning/toolkit.py search "read a pdf"
@@ -62,11 +72,15 @@ python .agent/skills/tool-provisioning/toolkit.py sweep
 ## The registry
 
 `.agent/skills/tool-provisioning/registry.json` ships a small, curated set of
-common needs (PDF/xlsx/YAML/image/HTML/CSV libraries, one browser-automation
-example, one MCP-server example, one manual/OS-specific example). Extend it
-per-project without touching the shipped file by adding
-`.agent/memory/tools/registry.local.json` (same array-of-entries shape) --
-entries with a matching `name` override the shipped one; new names are added.
+common needs: a few `kind: "stdlib"` entries (`csv`, `zip`, `xml`) that
+always resolve to "already available, nothing to install" since the
+standard library already covers them -- check those before assuming a task
+needs a pip install at all -- plus PDF/xlsx/YAML/image/HTML/pandas
+libraries, one browser-automation example, one MCP-server example, and one
+manual/OS-specific example. Extend it per-project without touching the
+shipped file by adding `.agent/memory/tools/registry.local.json` (same
+array-of-entries shape) -- entries with a matching `name` override the
+shipped one; new names are added.
 
 Each entry:
 
@@ -96,7 +110,62 @@ every install/uninstall event this tool has run, keyed by name. `uninstall`
 reads the ledger for the **recorded** uninstall command rather than trusting
 the current registry (which may have changed), and refuses outright if the
 ledger has no open install for that name -- so it can never be talked into
-removing a package the developer had already installed themselves.
+removing a package the developer had already installed themselves. Each
+install event also carries a best-effort SBOM fragment (name/version/license
+via `pip show`) when the entry has a `"package"` field, so a later compliance
+question ("what license is this under") doesn't require re-deriving it.
+
+```bash
+python .agent/skills/tool-provisioning/toolkit.py export-audit --out audit.json
+python .agent/skills/tool-provisioning/toolkit.py export-audit --since 2026-01-01T00:00:00Z
+```
+
+Produces a portable JSON report (every ledger event, plus what's currently
+open) a developer can hand to a compliance reviewer -- generated and written
+locally, never uploaded anywhere by this tool.
+
+## Org policy -- for when an org needs a say
+
+An optional, read-only policy file constrains what this skill will ever
+propose, and a project-local `registry.local.json` **cannot override it**:
+
+```json
+{
+  "mode": "allowlist",
+  "allow": ["pdf-text", "xlsx", "csv", "zip", "xml"],
+  "deny": [],
+  "overrides": [{"name": "pdf-text", "install_cmd":
+    ["pip", "install", "--user", "--index-url",
+     "https://artifactory.corp.example.com/api/pypi/pypi/simple", "pypdf"]}],
+  "pip_index_url": "https://artifactory.corp.example.com/api/pypi/pypi/simple"
+}
+```
+
+Location: `.agent/memory/tools/registry.org.json`, or an absolute path via
+the `AGENT_MEMORY_KIT_ORG_POLICY` env var (for an org that pushes policy
+outside any individual repo, e.g. via MDM). `mode` is `"advisory"` (default:
+nothing hidden, `deny` still blocks specific names), `"allowlist"` (only
+`allow` is ever proposable), or `"denylist"` (everything except `deny`).
+`overrides` fully replace matching fields on a shipped/local entry (e.g. to
+route an install through an internal mirror); `pip_index_url`, if set, is
+appended to any `pip` entry's install command that doesn't already specify
+`--index-url`, without needing a per-entry override.
+
+If `plan` reports **BLOCKED by org policy**, that is the end of the
+road for this skill -- say so to the developer, do not look for a
+workaround (a different registry name, a raw pip command typed by hand,
+etc.). That defeats the entire point of the policy existing.
+
+To pull a policy file from an internal source, run the one command in this
+skill that makes a real network call, and only because a developer typed it:
+
+```bash
+python .agent/skills/tool-provisioning/toolkit.py sync-org-registry https://intranet.corp.example/agent-policy.json
+python .agent/skills/tool-provisioning/toolkit.py sync-org-registry /path/to/local/policy.json
+```
+
+It validates the fetched content is a JSON object with a `mode` key before
+writing anything, and refuses (leaving the existing policy untouched) if not.
 
 ## What this is not
 

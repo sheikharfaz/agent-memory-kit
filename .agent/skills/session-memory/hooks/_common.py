@@ -7,7 +7,17 @@ worst case the memory feature silently does nothing this turn.
 """
 
 import json
+import os
 import sys
+
+DISABLE_ENV = "AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY"
+
+
+def session_memory_disabled():
+    """Org-wide or per-developer opt-out: set this env var (e.g. via a
+    shell profile pushed by MDM, or a corporate compliance policy) and
+    every hook becomes a no-op without editing any repo file."""
+    return os.environ.get(DISABLE_ENV, "").strip().lower() in ("1", "true", "yes")
 
 
 def read_hook_input():

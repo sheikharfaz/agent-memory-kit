@@ -86,6 +86,20 @@ shared words for. Consequences:
   contains raw prompt/response text rather than derived structural facts, the
   default (see `.gitignore` in SETUP.md) is to **not** commit it.
 
+## Compliance controls (for an org policy, not just a developer preference)
+
+* `AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY=1` -- set this env var anywhere
+  the process inherits it (a shell profile, an MDM-pushed environment) and
+  every hook becomes a silent no-op: nothing is recorded, nothing is
+  recalled, no `entries.jsonl` is even created. One variable, no repo edits,
+  safe to push org-wide without touching any individual project.
+* `AGENT_MEMORY_KIT_RETENTION_DAYS=<N>` -- the periodic prune the Stop hook
+  already runs (every ~250 entries) will also drop anything older than N
+  days. Unset means only the entry-count cap applies.
+* See [SECURITY.md](../../../SECURITY.md) in the kit repo (or your copy of
+  it) for the full data-classification writeup a privacy/DLP reviewer would
+  want.
+
 ## Troubleshooting
 
 | Symptom | Cause and fix |

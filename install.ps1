@@ -34,6 +34,7 @@ if ($Target -eq $src) {
 $files = @(
     'AGENTS.md',
     'SETUP.md',
+    'SECURITY.md',
     '.github/copilot-instructions.md',
     '.agent/skills/codebase-memory/SKILL.md',
     '.agent/skills/codebase-memory/index.py',
@@ -88,6 +89,8 @@ Write-Host ""
 Write-Host "Add '.agent/memory/' to .gitignore too if each developer should build"
 Write-Host "their own index instead of sharing one committed map."
 Write-Host ""
+Write-Host "Blocked on outbound PyPI/npm from tool-provisioning? Run:"
+Write-Host "  python .agent\skills\tool-provisioning\toolkit.py doctor"
 if (-not $WireHooks) {
     Write-Host "session-memory ships two more features, both opt-in:"
     Write-Host "  - re-run with -WireHooks to register the SessionStart / UserPromptSubmit /"

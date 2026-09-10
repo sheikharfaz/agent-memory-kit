@@ -7,6 +7,7 @@ Requires Python 3.8+ and, ideally, git.
 
 ```
 AGENTS.md                                  the contract, read every session
+SECURITY.md                                threat model, for your AppSec/OSPO reviewer
 .github/copilot-instructions.md            Copilot entry point → points at AGENTS.md
 .agent/skills/codebase-memory/SKILL.md     the skill definition
 .agent/skills/codebase-memory/index.py     builder
@@ -134,6 +135,11 @@ Or run `python3 .agent/skills/session-memory/wire_hooks.py .` from inside
 your project any time later, or paste the JSON above into
 `.claude/settings.json` yourself if you'd rather review the diff by hand.
 It's idempotent either way — re-running never duplicates an entry.
+
+Windows note: the wired command is `python3 ...`. If your PATH only has
+`python` or the `py` launcher (no `python3` shim), edit the three
+`"command"` strings in `.claude/settings.json` accordingly — it's plain
+JSON, safe to hand-edit.
 
 Add `.agent/memory/session/` to `.gitignore` (raw prompt/turn text, not
 derived structural facts like the codebase map — keep it local unless your

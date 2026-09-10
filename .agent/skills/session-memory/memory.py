@@ -224,10 +224,17 @@ def recall(root, query_text, limit=DEFAULT_RECALL_LIMIT, exclude_session=None,
 
 
 def recent(root, exclude_session=None, limit=DEFAULT_RECALL_LIMIT, one_per_session=True):
-    entries = list(load_entries(root))
-    if exclude_session:
-        entries = [e for e in entries if e.get("session_id") != exclude_session]
-    entries.sort(key=lambda e: e.get("ts", ""), reverse=True)
+    # load_entries() yields in append (chronological) order. Timestamps only
+    # have 1-second resolution, so two entries written in the same second --
+    # common, e.g. two prompts in quick succession -- can tie on `ts`. Sort
+    # by (ts, original position) so ties break toward the one written later,
+    # not toward Python's stable-sort default of "keeps original order",
+    # which would silently prefer the *older* of two tied entries.
+    entries = [e for e in load_entries(root)
+               if not exclude_session or e.get("session_id") != exclude_session]
+    entries = [e for _, e in sorted(enumerate(entries),
+                                     key=lambda pair: (pair[1].get("ts", ""), pair[0]),
+                                     reverse=True)]
     if not one_per_session:
         return entries[:limit]
     out, seen = [], set()

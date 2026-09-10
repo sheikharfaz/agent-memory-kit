@@ -28,9 +28,10 @@ sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 
 import memory as mem  # noqa: E402
-from _common import read_hook_input, safe_main  # noqa: E402
+from _common import read_hook_input, safe_main, session_memory_disabled  # noqa: E402
 
 PRUNE_EVERY = 250
+RETENTION_DAYS_ENV = "AGENT_MEMORY_KIT_RETENTION_DAYS"
 
 
 def extract_last_assistant_text(transcript_path, max_chars):
@@ -67,6 +68,8 @@ def extract_last_assistant_text(transcript_path, max_chars):
 
 
 def run():
+    if session_memory_disabled():
+        return
     data = read_hook_input()
     session_id = data.get("session_id", "unknown")
     cwd = data.get("cwd") or os.getcwd()
@@ -78,7 +81,8 @@ def run():
 
     n = mem.stats(root).get("entries", 0)
     if n and n % PRUNE_EVERY == 0:
-        mem.prune(root)
+        keep_days = os.environ.get(RETENTION_DAYS_ENV)
+        mem.prune(root, keep_days=int(keep_days) if keep_days else None)
 
 
 if __name__ == "__main__":

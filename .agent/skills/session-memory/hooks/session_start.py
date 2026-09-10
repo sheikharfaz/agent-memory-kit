@@ -22,10 +22,12 @@ sys.path.insert(0, os.path.dirname(HERE))  # skill dir: memory.py
 sys.path.insert(0, HERE)                   # this dir: _common.py
 
 import memory as mem  # noqa: E402
-from _common import read_hook_input, emit, snippet, safe_main  # noqa: E402
+from _common import read_hook_input, emit, snippet, safe_main, session_memory_disabled  # noqa: E402
 
 
 def run():
+    if session_memory_disabled():
+        return
     data = read_hook_input()
     session_id = data.get("session_id", "unknown")
     cwd = data.get("cwd") or os.getcwd()

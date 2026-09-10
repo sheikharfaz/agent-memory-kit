@@ -1,15 +1,23 @@
 # agent-memory-kit
 
+[![CI](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml)
+
 A drop-in `AGENTS.md` contract plus a local codebase index, for AI coding agents
 working in real repositories. Two opt-in extensions add cross-session
 continuity and propose-only tool provisioning on top of the same local-files
 approach.
 
-No MCP server. No daemon. No binary. No dependencies beyond Python 3.8+. The
-core kit (`codebase-memory`) makes no network calls, period. The two
-extensions below are opt-in and each documents its own, narrower trade-off:
-`session-memory` still makes no network calls; `tool-provisioning` makes none
-either, except the install command you explicitly approve.
+No MCP server. No daemon. No binary. No dependencies beyond Python 3.8+ —
+including the test suite (`tests/`, stdlib `unittest`). The core kit
+(`codebase-memory`) makes no network calls, period. The two extensions below
+are opt-in and each documents its own, narrower trade-off: `session-memory`
+still makes no network calls; `tool-provisioning` makes none either, except
+the install command you explicitly approve (or a `doctor` reachability
+probe that fetches nothing, or the one explicit `sync-org-registry` command).
+
+Built with locked-down corporate machines in mind: nothing here needs admin
+rights, IT provisioning, or a procurement/security review beyond reading
+[SECURITY.md](SECURITY.md) — see that file for the full threat model.
 
 ---
 
@@ -62,11 +70,21 @@ cd C:\path\to\your\project
 python .agent\skills\codebase-memory\index.py build
 ```
 
+On a machine where PowerShell's execution policy is `Restricted` (common on
+locked-down corporate images, and not something a non-admin user can
+change), use the stdlib-only Python installer instead — same behaviour,
+needs no script-execution policy at all:
+
+```bash
+python3 /path/to/agent-memory-kit/install.py . --wire-hooks
+```
+
 Or copy the files by hand — that is all the installer does:
 
 ```
 AGENTS.md                                       -> your repo root
 SETUP.md                                        -> your repo root
+SECURITY.md                                     -> your repo root (kit's threat model, for your AppSec reviewer)
 .github/copilot-instructions.md                 -> your repo
 .agent/skills/codebase-memory/SKILL.md          -> your repo
 .agent/skills/codebase-memory/index.py          -> your repo
@@ -130,7 +148,10 @@ entries get a small, capped ranking boost the more often they prove
 relevant (`weight`, bumped on recall) — a frequency heuristic that nudges
 toward what keeps mattering, not reinforcement learning in the ML sense, and
 never enough to override actual topical similarity. Every write passes
-through a best-effort secret redaction pass first. Detail:
+through a best-effort secret redaction pass first, entries are capped and
+auto-pruned, and `AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY=1` is a
+one-variable org-wide kill switch if a compliance policy requires one.
+Detail:
 [`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md).
 
 ## Extension: tool-provisioning (propose-only, opt-in)
@@ -140,18 +161,28 @@ approve it in chat** — installs it, lets the agent use it, then uninstalls
 it again. Nothing is ever installed silently.
 
 ```bash
+python .agent/skills/tool-provisioning/toolkit.py doctor            # read-only: what's reachable here?
 python .agent/skills/tool-provisioning/toolkit.py search "read a pdf"
 python .agent/skills/tool-provisioning/toolkit.py plan pdf-text     # prints commands, runs nothing
 python .agent/skills/tool-provisioning/toolkit.py install pdf-text  # only after you say yes
 python .agent/skills/tool-provisioning/toolkit.py uninstall pdf-text
 ```
 
-Every install is logged to a local ledger; `uninstall` reads its recorded
+Every install is logged to a local ledger, with a best-effort SBOM fragment
+(name/version/license via `pip show`); `uninstall` reads its recorded
 command back from that ledger and refuses to act on anything not listed
 there, so it can never remove a package that was already on your machine
 before the kit touched it. `list-installed` / `sweep` recover from a task
-that ended before cleanup ran. The registry is a small curated JSON file you
-extend per-project without touching the shipped copy. Detail:
+that ended before cleanup ran; `export-audit` produces a portable report for
+a compliance review. The registry is a small curated JSON file you extend
+per-project without touching the shipped copy — and an org can layer a
+read-only **policy file** on top (allowlist/denylist specific tools, or
+redirect installs through an internal package mirror) that a project's own
+registry cannot override; `sync-org-registry` is the one explicit,
+developer-run command that pulls it from a URL. `doctor` is a read-only
+preflight — is PyPI/npm/your mirror actually reachable from here, what CLIs
+exist, what proxy env vars are set — so a developer on a locked-down network
+self-diagnoses in seconds instead of opening an IT ticket. Detail:
 [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md).
 
 ---
@@ -276,13 +307,35 @@ anything it didn't itself install.
 
 ---
 
+## Testing
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Stdlib `unittest` only — no `pytest`, no test dependencies to install, so
+the "zero dependencies" claim holds for development too. Covers
+`memory.py`/`toolkit.py` unit-level (tokenizing, redaction, ranking, org
+policy, ledger semantics) plus subprocess-level smoke tests that run the
+actual installers and hooks the way a real user would. CI
+(`.github/workflows/ci.yml`) runs the same suite on Ubuntu/Windows/macOS
+across Python 3.8 and 3.12 on every push and PR.
+
+## For security/procurement reviewers
+
+See [SECURITY.md](SECURITY.md) for the full threat model, data-flow table,
+and what's explicitly out of scope. Short version: no telemetry, no network
+calls except a command you approve, nothing written outside `.agent/memory/`,
+zero third-party dependencies.
+
 ## Contributing
 
 Useful directions: better symbol patterns for under-served languages (the tables
-live at the top of `index.py`), additional query verbs, and real-world reports of
-what the index misses on your codebase. Open an issue with the language, a small
-reproducer, and what was missed.
+live at the top of `index.py`), additional query verbs, real-world reports of
+what the index misses on your codebase, and additional `tool-provisioning`
+registry entries for common needs. Open an issue with the language/tool, a
+small reproducer, and what was missing.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Version history: [CHANGELOG.md](CHANGELOG.md).

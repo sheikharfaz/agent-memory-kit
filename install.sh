@@ -34,6 +34,7 @@ fi
 FILES=(
   "AGENTS.md"
   "SETUP.md"
+  "SECURITY.md"
   ".github/copilot-instructions.md"
   ".agent/skills/codebase-memory/SKILL.md"
   ".agent/skills/codebase-memory/index.py"

@@ -1,7 +1,35 @@
 [
   {
+    "name": "csv",
+    "kind": "stdlib",
+    "match": ["csv", "comma separated", "tabular data small"],
+    "check": {"type": "python_import", "module": "csv"},
+    "install_cmd": null,
+    "uninstall_cmd": null,
+    "risk": "Standard library -- always available, nothing to install."
+  },
+  {
+    "name": "zip",
+    "kind": "stdlib",
+    "match": ["zip", "unzip", "archive", "compress"],
+    "check": {"type": "python_import", "module": "zipfile"},
+    "install_cmd": null,
+    "uninstall_cmd": null,
+    "risk": "Standard library -- always available, nothing to install."
+  },
+  {
+    "name": "xml",
+    "kind": "stdlib",
+    "match": ["xml", "xml parse"],
+    "check": {"type": "python_import", "module": "xml.etree.ElementTree"},
+    "install_cmd": null,
+    "uninstall_cmd": null,
+    "risk": "Standard library -- always available, nothing to install."
+  },
+  {
     "name": "pdf-text",
     "kind": "pip",
+    "package": "pypdf",
     "match": ["pdf", "extract pdf", "read pdf", "pdf text", "parse pdf"],
     "check": {"type": "python_import", "module": "pypdf"},
     "install_cmd": ["pip", "install", "--user", "pypdf"],
@@ -11,6 +39,7 @@
   {
     "name": "xlsx",
     "kind": "pip",
+    "package": "openpyxl",
     "match": ["xlsx", "excel", "spreadsheet", "openpyxl"],
     "check": {"type": "python_import", "module": "openpyxl"},
     "install_cmd": ["pip", "install", "--user", "openpyxl"],
@@ -20,6 +49,7 @@
   {
     "name": "yaml",
     "kind": "pip",
+    "package": "pyyaml",
     "match": ["yaml", "yml", "pyyaml"],
     "check": {"type": "python_import", "module": "yaml"},
     "install_cmd": ["pip", "install", "--user", "pyyaml"],
@@ -29,6 +59,7 @@
   {
     "name": "images",
     "kind": "pip",
+    "package": "Pillow",
     "match": ["image", "png", "jpg", "resize image", "thumbnail", "pillow"],
     "check": {"type": "python_import", "module": "PIL"},
     "install_cmd": ["pip", "install", "--user", "Pillow"],
@@ -38,6 +69,7 @@
   {
     "name": "html-parse",
     "kind": "pip",
+    "package": "beautifulsoup4",
     "match": ["html parse", "scrape html", "beautifulsoup", "bs4"],
     "check": {"type": "python_import", "module": "bs4"},
     "install_cmd": ["pip", "install", "--user", "beautifulsoup4"],
@@ -47,6 +79,7 @@
   {
     "name": "dataframes",
     "kind": "pip",
+    "package": "pandas",
     "match": ["csv analysis", "dataframe", "pandas", "tabular data"],
     "check": {"type": "python_import", "module": "pandas"},
     "install_cmd": ["pip", "install", "--user", "pandas"],
@@ -56,6 +89,7 @@
   {
     "name": "browser-automation",
     "kind": "pip",
+    "package": "playwright",
     "match": ["browser automation", "headless browser", "playwright", "scrape a page with js"],
     "check": {"type": "python_import", "module": "playwright"},
     "install_cmd": ["pip", "install", "--user", "playwright"],

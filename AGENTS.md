@@ -320,10 +320,13 @@ python .agent/skills/tool-provisioning/toolkit.py plan <name>
 ```
 
 Both are read-only — they print the exact install/uninstall commands and a
-risk note, they never run them. Follow §8's command policy exactly: state
-what `plan` printed and get explicit developer approval in this chat before
-`install <name>`, then `uninstall <name>` (or `sweep`) once the task is
-done. `uninstall` refuses to touch anything not in its own ledger
-(`.agent/memory/tools/tool-ledger.jsonl`), so it can never be talked into
-removing something that was already there. Full detail:
+risk note, they never run them. If PyPI/npm seem unreachable, run `doctor`
+first (also read-only) before assuming the task is blocked. Follow §8's
+command policy exactly: state what `plan` printed and get explicit developer
+approval in this chat before `install <name>`, then `uninstall <name>` (or
+`sweep`) once the task is done. `uninstall` refuses to touch anything not in
+its own ledger (`.agent/memory/tools/tool-ledger.jsonl`), so it can never be
+talked into removing something that was already there. An org policy file
+can allowlist/denylist entries outright — a `plan` that comes back `BLOCKED`
+means stop and say so, not look for a workaround. Full detail:
 `.agent/skills/tool-provisioning/SKILL.md`.
