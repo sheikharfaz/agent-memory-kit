@@ -34,6 +34,8 @@ CALLS_AUTO_LIMIT = 25_000         # above this many files, call edges are opt-in
 MAP_MODULE_LIMIT = 60
 SHARD_SYMBOL_LIMIT = 400
 MIN_HUB_CALLERS = 2               # a symbol called from exactly one place isn't a hub
+OVERVIEW_MERGE_THRESHOLD = 8      # entry points + routes at or below this fold into one section
+COMPACT_MODULE_LIST_MAX = 3       # at or below this many code-modules, skip the table
 
 # ---------------------------------------------------------------- discovery --
 
@@ -812,26 +814,46 @@ def render(mem, mod_dir, stats, file_recs, sym_recs, edge_recs, routes_all, modu
       "line range, in that order. Absence here is **not** proof of absence — "
       "see Coverage.")
     A("")
-    A("## Stack")
-    A("")
+    # Stack/entry-points/HTTP-surface are each real, useful facts, but three
+    # separate headed sections (~3 header lines + ~6 blank lines of pure
+    # structure) cost more than the facts themselves when there are only a
+    # handful of each -- exactly the small-repo case. Below the combined
+    # threshold they fold into one "Overview" section; a repo with a large
+    # surface (60 routes, a dozen entry points) keeps the fuller, separately
+    # headed form where the extra structure actually earns its keep.
     tot = sum(stats["loc_by_lang"].values()) or 1
-    for lang, loc in list(stats["loc_by_lang"].items())[:14]:
-        A("- `%s` — %s LOC (%.0f%%)" % (lang, f"{loc:,}", 100.0 * loc / tot))
-    A("")
-    if entry:
-        A("## Likely entry points")
+    stack_bits = ["`%s` %s LOC (%.0f%%)" % (lang, f"{loc:,}", 100.0 * loc / tot)
+                  for lang, loc in list(stats["loc_by_lang"].items())[:14]]
+    uniq_routes = sorted(set(routes_all))
+    if len(entry) + len(uniq_routes) <= OVERVIEW_MERGE_THRESHOLD:
+        A("## Overview")
         A("")
-        for p in entry:
-            A("- `%s`" % p)
+        A("- Stack: %s" % ", ".join(stack_bits))
+        if entry:
+            A("- Entry point(s): %s" % ", ".join("`%s`" % p for p in entry))
+        if uniq_routes:
+            A("- Routes: %s" % "; ".join("`%s %s`→`%s`" % (v, p, r) for v, p, r in uniq_routes))
         A("")
-    if routes_all:
-        A("## HTTP surface (%d detected)" % len(routes_all))
+    else:
+        A("## Stack")
         A("")
-        for verb, path, rel in sorted(set(routes_all))[:60]:
-            A("- `%s %s` → `%s`" % (verb, path, rel))
-        if len(set(routes_all)) > 60:
-            A("- …%d more, see module shards" % (len(set(routes_all)) - 60))
+        for bit in stack_bits:
+            A("- %s" % bit)
         A("")
+        if entry:
+            A("## Likely entry points")
+            A("")
+            for p in entry:
+                A("- `%s`" % p)
+            A("")
+        if uniq_routes:
+            A("## HTTP surface (%d detected)" % len(uniq_routes))
+            A("")
+            for verb, path, rel in uniq_routes[:60]:
+                A("- `%s %s` → `%s`" % (verb, path, rel))
+            if len(uniq_routes) > 60:
+                A("- …%d more, see module shards" % (len(uniq_routes) - 60))
+            A("")
     # A module with 0 LOC and 0 symbols has no code in it (docs/config/data
     # only, e.g. a markdown-only directory) -- its shard would be nearly
     # empty too. Naming it in one line costs far less than a full table row
@@ -841,18 +863,26 @@ def render(mem, mod_dir, stats, file_recs, sym_recs, edge_recs, routes_all, modu
     A("## Modules (%d) — largest first" % len(by_mod))
     A("")
     if code_mods:
-        A("| module | files | LOC | symbols | shard |")
-        A("|---|---:|---:|---:|---|")
-        for name, m in code_mods[:MAP_MODULE_LIMIT]:
-            A("| `%s` | %d | %s | %d | [`%s.md`](modules/%s.md) |"
-              % (name, len(m["files"]), f'{m["loc"]:,}', len(m["syms"]),
-                 slug(name), slug(name)))
-        if len(code_mods) > MAP_MODULE_LIMIT:
-            A("")
-            A("_%d smaller modules omitted; every module still has a shard in `modules/`._"
-              % (len(code_mods) - MAP_MODULE_LIMIT))
+        # A markdown table costs a header + separator row regardless of how
+        # many modules there are -- worth it once there's enough to actually
+        # compare at a glance, not for the 1-3-module case a small repo has.
+        if len(code_mods) > COMPACT_MODULE_LIST_MAX:
+            A("| module | files | LOC | symbols | shard |")
+            A("|---|---:|---:|---:|---|")
+            for name, m in code_mods[:MAP_MODULE_LIMIT]:
+                A("| `%s` | %d | %s | %d | [`%s.md`](modules/%s.md) |"
+                  % (name, len(m["files"]), f'{m["loc"]:,}', len(m["syms"]),
+                     slug(name), slug(name)))
+            if len(code_mods) > MAP_MODULE_LIMIT:
+                A("")
+                A("_%d smaller modules omitted; every module still has a shard in `modules/`._"
+                  % (len(code_mods) - MAP_MODULE_LIMIT))
+        else:
+            for name, m in code_mods:
+                A("- `%s`: %df/%sL/%ds → [`%s.md`](modules/%s.md)"
+                  % (name, len(m["files"]), f'{m["loc"]:,}', len(m["syms"]),
+                     slug(name), slug(name)))
     if empty_mods:
-        A("")
         A("_+%d module(s) with no parsed code (shard in `modules/` has the file list)._"
           % len(empty_mods))
     A("")
@@ -879,16 +909,15 @@ def render(mem, mod_dir, stats, file_recs, sym_recs, edge_recs, routes_all, modu
         A("")
     A("## Coverage and limits")
     A("")
-    skip_note = (" (skipped " + ", ".join("%s=%d" % (k, v) for k, v in sorted(stats["skipped"].items())) + ")") \
+    skip_note = (", skipped " + ", ".join("%s=%d" % (k, v) for k, v in sorted(stats["skipped"].items()))) \
         if stats["skipped"] else ""
-    A("- Discovery: `%s`. Parsed %d of %d files%s."
-      % (stats["discovery"], stats["files_parsed"], stats["files_total"], skip_note))
-    A("- Call edges (`%s`): %d resolved, %d unresolved (ambiguous name)."
-      % (stats["calls_mode"], stats["call_edges"], stats["ambiguous_calls"]))
-    A("- Pattern-matched, not compiler-accurate: dynamic dispatch, macros, "
-      "reflection, codegen, and string-built calls are invisible to it.")
-    A("- **Clean ≠ proof of absence.** Confirm with a direct search over the "
-      "relevant paths before any \"there is no X\" claim.")
+    A("- %s discovery, %d/%d files parsed%s; calls=`%s`, %d resolved, %d ambiguous."
+      % (stats["discovery"], stats["files_parsed"], stats["files_total"], skip_note,
+         stats["calls_mode"], stats["call_edges"], stats["ambiguous_calls"]))
+    A("- Pattern-matched, not compiler-accurate (dynamic dispatch, macros, "
+      "reflection, codegen, string-built calls are invisible). "
+      "**Clean ≠ proof of absence** — confirm with a direct search before "
+      "any \"there is no X\" claim.")
     A("")
     with open(os.path.join(mem, "CODEBASE_MAP.md"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(L))

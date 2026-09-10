@@ -191,13 +191,26 @@ class TestMapCompactness(unittest.TestCase):
         self.assertIn("## Hubs", map_text)
         self.assertIn("helper", map_text)
 
-    def test_modules_with_no_parsed_code_are_summarized_not_tabled(self):
+    def test_empty_modules_are_summarized_not_tabled_or_listed(self):
         self.write("app/a.py", "def f():\n    pass\n")
         self.write("docs/readme.md", "# hello\n")
         map_text = self.build()
-        self.assertIn("| `app`", map_text)          # real code -> full table row
-        self.assertNotIn("| `docs`", map_text)       # no parsed code -> not a table row
-        self.assertIn("no parsed code", map_text)    # but still mentioned
+        self.assertIn("`app`", map_text)             # real code -> mentioned somewhere
+        self.assertNotIn("`docs`", map_text)          # no parsed code -> not named individually
+        self.assertIn("no parsed code", map_text)     # but still mentioned in aggregate
+
+    def test_few_code_modules_render_as_compact_lines_not_a_table(self):
+        self.write("app/a.py", "def f():\n    pass\n")
+        map_text = self.build()
+        self.assertNotIn("| module |", map_text)  # below the table threshold -- no table header
+        self.assertIn("- `app`:", map_text)
+
+    def test_many_code_modules_render_as_a_table(self):
+        for i in range(5):
+            self.write("mod%d/a.py" % i, "def f():\n    pass\n")
+        map_text = self.build()
+        self.assertIn("| module |", map_text)     # above the table threshold -- table returns
+        self.assertIn("| `mod0`", map_text)
 
 
 class TestJsonFlagCleanliness(unittest.TestCase):

@@ -47,6 +47,21 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
   tokens than an unaided one, to the kit-assisted total coming in below
   the baseline overall -- see that repo's `SESSION_LOG.md`/`COMPARISON.md`
   for the exact before/after numbers.
+- A second round on the same map, still dropping no information: `Stack`/
+  `Likely entry points`/`HTTP surface` fold into one `Overview` section
+  when there are few enough entry points and routes to name (a larger
+  surface keeps the fuller, separately headed form, where the structure
+  earns its keep); the module table only appears once there are enough
+  modules to be worth tabulating, otherwise modules list as compact lines;
+  `Coverage and limits`' four bullets condense to two. `query.py file`
+  also got denser -- symbols list on one comma-joined line
+  (`name(kind):line`) instead of one padded line each. Combined with the
+  round above, `linkshrink-agent-memory-kit`'s Sessions 2-4 total dropped
+  further, from ~1,676 to ~1,430 tokens against baseline's ~1,993 (~28%
+  fewer, not the ~2x-worse first measurement) -- see that repo's
+  `SESSION_LOG.md` for the full, still-honest accounting, including why
+  it stops short of literally half without trading away either the map's
+  actual informativeness or the "always read the map" guarantee.
 
 ### Fixed
 - `query.py`: `--root <path>` (and `--json`/`--limit`) silently reset to

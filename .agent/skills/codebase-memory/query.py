@@ -177,6 +177,10 @@ def cmd_search(g, args):
         print("%d match(es)." % len(rows))
 
 
+KIND_ABBR = {"function": "fn", "method": "mth", "class": "cls",
+             "interface": "iface", "type": "typ", "struct": "struct"}
+
+
 def cmd_file(g, args):
     p = args.path.replace("\\", "/")
     rec = next((f for f in g.files() if f["p"] == p), None)
@@ -184,18 +188,21 @@ def cmd_file(g, args):
         print("%s is NOT in the index. Either it does not exist, it is ignored, "
               "or it was skipped. Run `coverage %s` for the reason." % (p, p))
         return
-    print("%s  lang=%s mod=%s loc=%s parsed=%s"
+    print("%s  %s, %s, %s LOC, parsed=%s"
           % (p, rec["lang"], rec["mod"], rec.get("loc", "?"), rec.get("parsed")))
     syms = [s for s in g.symbols() if s["p"] == p]
-    print("-- defines %d symbol(s)" % len(syms))
-    for s in syms[: args.limit]:
-        print("   %5d  %-9s %s" % (s["l"], s["k"], s["n"]))
+    if syms:
+        shown = syms[: args.limit]
+        print("symbols (%d): %s" % (len(syms), ", ".join(
+            "%s(%s):%d" % (s["n"], KIND_ABBR.get(s["k"], s["k"]), s["l"]) for s in shown)))
+        if len(syms) > args.limit:
+            print("  … %d more (raise --limit)" % (len(syms) - args.limit))
     imps = sorted({e["d"] for e in g.edges("IMPORTS") if e["s"] == p})
     if imps:
-        print("-- imports: " + ", ".join(imps[:30]))
+        print("imports: " + ", ".join(imps[:30]))
     routes = sorted({e["d"] for e in g.edges("EXPOSES") if e["s"] == p})
     if routes:
-        print("-- exposes: " + ", ".join(routes[:20]))
+        print("exposes: " + ", ".join(routes[:20]))
 
 
 def cmd_importers(g, args):
