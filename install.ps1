@@ -48,7 +48,9 @@ $files = @(
     '.agent/skills/session-memory/hooks/stop.py',
     '.agent/skills/tool-provisioning/SKILL.md',
     '.agent/skills/tool-provisioning/toolkit.py',
-    '.agent/skills/tool-provisioning/registry.json'
+    '.agent/skills/tool-provisioning/registry.json',
+    '.agent/skills/dev-recap/SKILL.md',
+    '.agent/skills/dev-recap/recap_log.py'
 )
 
 $copied = 0

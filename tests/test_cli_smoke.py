@@ -38,7 +38,8 @@ class TestInstallPy(TempRepo):
         self.assertEqual(r.returncode, 0, r.stderr)
         for rel in ("AGENTS.md", "SETUP.md", "SECURITY.md",
                     ".agent/skills/session-memory/memory.py",
-                    ".agent/skills/tool-provisioning/toolkit.py"):
+                    ".agent/skills/tool-provisioning/toolkit.py",
+                    ".agent/skills/dev-recap/recap_log.py"):
             self.assertTrue(os.path.exists(os.path.join(self.repo, rel)), rel)
 
     def test_install_is_idempotent_without_force(self):
@@ -145,6 +146,45 @@ class TestToolkitCliSmoke(TempRepo):
         r = run([sys.executable, self.toolkit, "plan", "pdf-text"], cwd=self.repo)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("BLOCKED", r.stdout)
+
+
+class TestDevRecapCliSmoke(TempRepo):
+    def setUp(self):
+        super().setUp()
+        run([sys.executable, os.path.join(KIT_ROOT, "install.py"), self.repo])
+        self.recap = os.path.join(self.repo, ".agent", "skills", "dev-recap", "recap_log.py")
+
+    def test_gaps_on_clean_repo_reports_no_changes(self):
+        with open(os.path.join(self.repo, "a.py"), "w") as fh:
+            fh.write("print(1)\n")
+        run(["git", "add", "-A"], cwd=self.repo)
+        run(["git", "-c", "user.email=t@example.com", "-c", "user.name=T", "commit", "-q", "-m", "init"],
+            cwd=self.repo)
+        r = run([sys.executable, self.recap, "gaps", "--json"], cwd=self.repo)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(json.loads(r.stdout)["changed_files"], 0)
+
+    def test_record_recap_then_stats(self):
+        r = run([sys.executable, self.recap, "record-recap", "--task", "demo",
+                  "--files", "a.py", "--summary", "did a thing"], cwd=self.repo)
+        self.assertEqual(r.returncode, 0)
+        r = run([sys.executable, self.recap, "stats", "--json"], cwd=self.repo)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(json.loads(r.stdout)["recaps"], 1)
+
+    def test_record_quiz_and_due_for_review(self):
+        r = run([sys.executable, self.recap, "record-quiz", "--topic", "demo", "--result", "confused"],
+                cwd=self.repo)
+        self.assertEqual(r.returncode, 0)
+        r = run([sys.executable, self.recap, "due-for-review", "--json"], cwd=self.repo)
+        self.assertEqual(r.returncode, 0)
+        topics = [row["topic"] for row in json.loads(r.stdout)]
+        self.assertIn("demo", topics)
+
+    def test_invalid_quiz_result_rejected(self):
+        r = run([sys.executable, self.recap, "record-quiz", "--topic", "demo", "--result", "bogus"],
+                cwd=self.repo)
+        self.assertNotEqual(r.returncode, 0)
 
 
 if __name__ == "__main__":

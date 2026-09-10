@@ -20,6 +20,7 @@ under their own OS-level permissions.
 | `codebase-memory` (`index.py`, `query.py`) | source files in the repo | only `.agent/memory/` (map, module shards, graph) | **none, ever** |
 | `session-memory` (`memory.py`, hooks) | its own local log | only `.agent/memory/session/` | **none, ever** |
 | `tool-provisioning` (`toolkit.py`) | its own registry/ledger | only `.agent/memory/tools/` | **only** the install/uninstall command a human approved in chat, plus `doctor`'s bare TCP reachability probes (nothing sent or fetched), plus the one explicit `sync-org-registry` command if a developer runs it |
+| `dev-recap` (`recap_log.py`) | `git diff` output, its own logs, `codebase-memory`'s index if present | only `.agent/memory/learning/` | **none, ever** |
 
 Nothing here phones home, collects telemetry, or uploads anything by itself.
 Every network-capable action is either a command a human explicitly
@@ -83,6 +84,19 @@ Consequences:
 - An org-wide kill switch exists: set `AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY=1`
   (e.g. via a centrally managed environment variable) and every hook becomes
   a no-op without touching any repo file.
+
+## Data classification — `dev-recap`
+
+`.agent/memory/learning/` holds recap summaries and self-reported quiz
+results (`understood`/`partial`/`confused` plus optional free-text notes).
+This is explicitly **not** a performance-tracking or manager-visibility
+feature — see the "AI ethics stance" in
+`.agent/skills/dev-recap/SKILL.md`. It exists for one purpose: letting the
+same developer's next session know what's worth reinforcing. Nothing here
+aggregates results across developers, exports them, or is designed to be
+read by anyone but the developer whose machine it's on. If your org wants
+learning analytics, that is a different, opt-in feature this kit does not
+provide — do not build it by silently piping this file somewhere else.
 
 ## Governance for `tool-provisioning`
 

@@ -199,6 +199,9 @@ Before you say a task is complete, all of these, with output shown:
 5. The diff contains nothing you cannot justify against the request.
 6. You have stated, in one line each: what changed, what you verified, and what
    remains unverified.
+7. For anything beyond a one-line fix, close with the `dev-recap` protocol
+   (§15) — not optional to *offer*, though the developer's follow-up (quiz,
+   walkthrough, or neither) always is.
 
 Never report success on the strength of the code looking right.
 
@@ -330,3 +333,15 @@ talked into removing something that was already there. An org policy file
 can allowlist/denylist entries outright — a `plan` that comes back `BLOCKED`
 means stop and say so, not look for a workaround. Full detail:
 `.agent/skills/tool-provisioning/SKILL.md`.
+
+## 15. Dev-recap — closing protocol, opt-in but recommended
+
+The developer didn't write this code, so before declaring done (§7): give a
+plain-English recap with `path:line` citations, ground it in *this* repo's
+own conventions (via `codebase-memory` if built here, else direct
+inspection per §6), run `python .agent/skills/dev-recap/recap_log.py gaps`
+and report what it finds honestly, then genuinely offer — never force — a
+quiz or walkthrough to help it stick. Close every time with an
+**Assumptions & diversions** line, even when it's "none." Ethics rationale,
+the exact recap template, and why quiz results never leave the developer's
+own machine: `.agent/skills/dev-recap/SKILL.md`.

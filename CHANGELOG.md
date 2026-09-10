@@ -34,6 +34,16 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
   GitHub Actions CI workflow across Ubuntu/Windows/macOS × Python 3.8/3.12.
 - Three new stdlib-only registry entries (`csv`, `zip`, `xml`) that resolve
   to "already available" instead of proposing a pip install.
+- `dev-recap` skill: a closing protocol (`AGENTS.md` §15) for anything
+  beyond a one-line fix — a plain-English, junior-dev-pitched recap with
+  citations, grounded in this repo's own conventions; a heuristic
+  `recap_log.py gaps` scan (missing tests, new TODO/FIXME markers,
+  paths missing from `codebase-memory`'s index); a genuinely optional
+  quiz/walkthrough offer (questions generated live by the agent from the
+  actual diff, not scripted); spaced-repetition-lite `due-for-review`
+  tracking; and a mandatory closing "assumptions & diversions" line, even
+  when it's "none." Quiz/recap data stays local to the developer's own
+  machine by design — see its SKILL.md's "AI ethics stance."
 
 ### Fixed
 - `session-memory`'s `recent()` could return a session's *older* entry

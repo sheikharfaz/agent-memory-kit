@@ -26,6 +26,8 @@ copies everything, including these, by default):
 .agent/skills/tool-provisioning/SKILL.md       the skill definition
 .agent/skills/tool-provisioning/toolkit.py     search/plan/install/uninstall CLI
 .agent/skills/tool-provisioning/registry.json  curated tool registry
+.agent/skills/dev-recap/SKILL.md               the skill definition
+.agent/skills/dev-recap/recap_log.py           recap/quiz/gap-scan CLI
 ```
 
 ## 2. Build the index once
@@ -162,6 +164,25 @@ python .agent/skills/tool-provisioning/toolkit.py plan pdf-text
 approved the exact command in chat first. Extend the registry per-project
 without touching the shipped file by adding
 `.agent/memory/tools/registry.local.json` (same shape as `registry.json`).
+
+## 8. Optional: dev-recap
+
+Nothing to wire up — it's a protocol the agent follows at the Definition of
+Done (`AGENTS.md` §7/§15), backed by a CLI it calls itself:
+
+```bash
+python .agent/skills/dev-recap/recap_log.py gaps
+python .agent/skills/dev-recap/recap_log.py record-recap --task <slug> --files a.py,b.py --summary "..."
+python .agent/skills/dev-recap/recap_log.py due-for-review
+```
+
+Nothing here requires the other two extensions, but it mirrors a note into
+`session-memory` (if installed) and can cross-reference `codebase-memory`'s
+index (if built) — install all three for the full effect. Read
+`.agent/skills/dev-recap/SKILL.md`'s "AI ethics stance" section once,
+whichever agent/IDE you're using — it explains why the quiz/walkthrough
+offer must always stay optional and why results never leave the
+developer's own machine.
 
 ## Very large repositories
 

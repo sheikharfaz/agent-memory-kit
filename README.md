@@ -3,17 +3,19 @@
 [![CI](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml)
 
 A drop-in `AGENTS.md` contract plus a local codebase index, for AI coding agents
-working in real repositories. Two opt-in extensions add cross-session
-continuity and propose-only tool provisioning on top of the same local-files
-approach.
+working in real repositories. Three opt-in extensions add cross-session
+continuity, propose-only tool provisioning, and a closing recap/quiz so the
+developer actually understands what an agent just shipped under their name —
+all on top of the same local-files approach.
 
 No MCP server. No daemon. No binary. No dependencies beyond Python 3.8+ —
 including the test suite (`tests/`, stdlib `unittest`). The core kit
-(`codebase-memory`) makes no network calls, period. The two extensions below
-are opt-in and each documents its own, narrower trade-off: `session-memory`
-still makes no network calls; `tool-provisioning` makes none either, except
-the install command you explicitly approve (or a `doctor` reachability
-probe that fetches nothing, or the one explicit `sync-org-registry` command).
+(`codebase-memory`) makes no network calls, period. The extensions below are
+opt-in and each documents its own, narrower trade-off: `session-memory` and
+`dev-recap` still make no network calls; `tool-provisioning` makes none
+either, except the install command you explicitly approve (or a `doctor`
+reachability probe that fetches nothing, or the one explicit
+`sync-org-registry` command).
 
 Built with locked-down corporate machines in mind: nothing here needs admin
 rights, IT provisioning, or a procurement/security review beyond reading
@@ -91,6 +93,7 @@ SECURITY.md                                     -> your repo root (kit's threat 
 .agent/skills/codebase-memory/query.py          -> your repo
 .agent/skills/session-memory/                   -> your repo   (opt-in, see below)
 .agent/skills/tool-provisioning/                -> your repo   (opt-in, see below)
+.agent/skills/dev-recap/                        -> your repo   (opt-in, see below)
 ```
 
 Then add to your project's `.gitignore`:
@@ -185,6 +188,37 @@ exist, what proxy env vars are set — so a developer on a locked-down network
 self-diagnoses in seconds instead of opening an IT ticket. Detail:
 [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md).
 
+## Extension: dev-recap (closing recap + optional quiz, opt-in)
+
+The other two extensions make the agent faster and safer. This one exists
+because the developer didn't write the code an agent just shipped for
+them, and a fast, well-cited diff is not the same thing as an understood
+one — see the "AI ethics stance" in its `SKILL.md` for the reasoning.
+
+At the Definition of Done for anything beyond a one-line fix, the agent:
+gives a plain-English, junior-dev-pitched recap with `path:line` citations;
+grounds it in *this* repo's own conventions (`codebase-memory`, if built,
+or direct inspection otherwise); runs a heuristic gap scan; **genuinely
+offers** — never forces — a quiz or walkthrough; and always closes with an
+explicit **assumptions & diversions** line, even when it's "none."
+
+```bash
+python .agent/skills/dev-recap/recap_log.py gaps                 # heuristic: missing tests, new TODOs, unindexed files
+python .agent/skills/dev-recap/recap_log.py record-recap --task auth-retry --files a.py,b.py --summary "..."
+python .agent/skills/dev-recap/recap_log.py record-quiz --topic auth-retry --result understood
+python .agent/skills/dev-recap/recap_log.py due-for-review        # spaced-repetition-lite: what's worth revisiting
+```
+
+The quiz questions themselves are generated live by the agent from the
+actual diff, not by a script — `recap_log.py` only logs the outcome
+(locally) and ranks what's worth a follow-up check-in later. Quiz results
+answer one question, for the developer alone: **nothing here reports
+results to a manager, a dashboard, or CI** — see the SKILL.md if you're
+tempted to wire it into something that would. `gaps` is a lead generator
+with the same accuracy contract as `codebase-memory`'s `orphans`: a clean
+result means the heuristic found nothing, never that nothing is missing.
+Detail: [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md).
+
 ---
 
 ## What the agent contract enforces
@@ -277,9 +311,12 @@ Copilot picks it up either way — you maintain one file, not two.
 
 `session-memory`'s automatic behaviour (the hooks) is Claude-Code-specific —
 that harness is what defines `SessionStart` / `UserPromptSubmit` / `Stop`
-hooks. Its `memory.py` CLI and `tool-provisioning`'s `toolkit.py` are plain
-Python and work anywhere; other harnesses just have to invoke them by hand or
-via their own hook/skill mechanism instead of getting it for free.
+hooks. Its `memory.py` CLI, `tool-provisioning`'s `toolkit.py`, and
+`dev-recap`'s `recap_log.py` are plain Python and work anywhere; other
+harnesses just have to invoke them by hand or via their own hook/skill
+mechanism instead of getting it for free. `dev-recap` in particular is just
+`AGENTS.md` §15 plus a CLI — no hooks needed at all, so it works in any
+harness that reads `AGENTS.md` the day you install it.
 
 If you already run RPI chat modes, they compose directly: `AGENTS.md` §5 defines
 the same three phases and names the artifacts they should write.
@@ -303,7 +340,10 @@ shared vocabulary, not paraphrased meaning, and it is not reinforcement
 learning in the ML sense; see the extension section above. `tool-provisioning`
 is not a package manager or a sandbox — it never installs anything without an
 explicit yes from a human in the current chat, and it never uninstalls
-anything it didn't itself install.
+anything it didn't itself install. `dev-recap` is not a gate, a scorecard,
+or proof of correctness — the quiz is a comprehension check, not a test
+suite, and `gaps` is a heuristic lead, not a guarantee; nothing about it
+blocks a task or reports to anyone but the developer being recapped.
 
 ---
 
