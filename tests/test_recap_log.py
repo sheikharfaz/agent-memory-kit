@@ -190,6 +190,45 @@ class TestGapsInGitRepo(TempGitRoot):
         thing_finding = next((f for f in result["findings"] if f["path"] == "src/thing.py"), None)
         self.assertIsNone(thing_finding)  # both files changed together -> no "missing test" flag
 
+    def write_files_jsonl(self, paths):
+        # codebase-memory's real schema uses the short key "p" for path
+        # (see index.py's write_jsonl / Graph). Deliberately mirrors the
+        # real format rather than a convenient guess, since a mismatch here
+        # is exactly the bug this test exists to catch.
+        lines = "\n".join(json.dumps({"p": p}) for p in paths)
+        self.write(".agent/memory/graph/files.jsonl", lines + "\n")
+
+    def test_indexed_file_is_not_flagged_as_unindexed(self):
+        self.write("src/thing.py", "def f():\n    return 1\n")
+        self.write("tests/test_thing.py", "def test_f():\n    pass\n")
+        self.commit()
+        self.write("src/thing.py", "def f():\n    # TODO: x\n    return 1\n")
+        self.write_files_jsonl(["src/thing.py"])
+        result = rl.gaps(self.root)
+        finding = next(f for f in result["findings"] if f["path"] == "src/thing.py")
+        self.assertNotIn("not_in_codebase_index", finding)
+
+    def test_unindexed_file_is_flagged(self):
+        self.write("src/thing.py", "def f():\n    return 1\n")
+        self.write("tests/test_thing.py", "def test_f():\n    pass\n")
+        self.commit()
+        self.write("src/thing.py", "def f():\n    # TODO: x\n    return 1\n")
+        self.write_files_jsonl(["some/other/file.py"])  # thing.py is NOT in the index
+        result = rl.gaps(self.root)
+        finding = next(f for f in result["findings"] if f["path"] == "src/thing.py")
+        self.assertIn("not_in_codebase_index", finding)
+
+    def test_no_graph_at_all_is_not_flagged(self):
+        # codebase-memory simply isn't installed/built here -- not
+        # applicable, and must not be reported as a gap.
+        self.write("src/thing.py", "def f():\n    return 1\n")
+        self.write("tests/test_thing.py", "def test_f():\n    pass\n")
+        self.commit()
+        self.write("src/thing.py", "def f():\n    # TODO: x\n    return 1\n")
+        result = rl.gaps(self.root)
+        finding = next(f for f in result["findings"] if f["path"] == "src/thing.py")
+        self.assertNotIn("not_in_codebase_index", finding)
+
     def test_non_code_extension_ignored(self):
         self.write("README.md", "hello\n")
         self.commit()

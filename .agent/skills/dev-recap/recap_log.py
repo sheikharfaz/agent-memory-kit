@@ -253,7 +253,11 @@ def _codebase_memory_indexed(root, path):
         with open(files_jsonl, encoding="utf-8") as fh:
             for line in fh:
                 rec = json.loads(line)
-                if rec.get("path") == path:
+                # codebase-memory's files.jsonl uses short keys ("p" for
+                # path, see index.py's write_jsonl) -- this checked "path"
+                # instead, so it never matched anything and every changed
+                # file was reported as unindexed regardless of truth.
+                if rec.get("p") == path:
                     return True
     except Exception:
         return None

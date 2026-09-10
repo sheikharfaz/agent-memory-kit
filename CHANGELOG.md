@@ -35,6 +35,12 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
   `routes`, `orphans`) printed a trailing human-readable summary/caveat
   line even when `--json` was set, producing output that wasn't valid JSON
   for a machine consumer. Now suppressed under `--json`.
+- `dev-recap`'s `gaps` cross-referenced `codebase-memory`'s `files.jsonl`
+  against the wrong field name (`"path"` instead of the real short key
+  `"p"`), so it always reported every changed file as "not in the
+  codebase index" regardless of whether it actually was. Found by building
+  a real project with the kit installed and noticing a freshly-rebuilt
+  index still triggered the warning.
 
 ## [0.2.0] — 2026-09-10
 
