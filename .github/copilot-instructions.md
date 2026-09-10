@@ -35,15 +35,20 @@ Then read `.agent/memory/CODEBASE_MAP.md` and `.agent/memory/NOTES.md`.
 
 ## Workflow
 
-Anything beyond a one-file edit runs Research → Plan → Implement, writing
-`research.md`, `plan.md`, `progress.md` under `.agent/work/<task-slug>/`, with a
-Hypothesis → Verify → Evidence gate at every phase boundary. Stop for approval
-after the plan. Details in `AGENTS.md` §5.
+Anything beyond a one-file, already-unambiguous edit writes `PRD.md`
+(what/why — skip only for a trivial, unambiguous request, even if told to
+"just implement it"), `research.md` (what exists), `TRD.md` (how, and real
+alternatives rejected), `progress.md` (execute one phase at a time) under
+`.agent/work/<task-slug>/`, with a Hypothesis → Verify → Evidence gate at
+every phase boundary. Stop for approval after the TRD. Details in
+`AGENTS.md` §5 and `.agent/skills/spec-first/SKILL.md`.
 
 ## Optional extensions
 
-If present, `.agent/skills/session-memory/` (cross-session recall of past
-prompts/turns) and `.agent/skills/tool-provisioning/` (propose-only tool
-install/uninstall) are opt-in — see `AGENTS.md` §13–14 and their own
-`SKILL.md` files. Tool provisioning never installs anything without explicit
-approval in the current conversation.
+If present: `.agent/skills/session-memory/` (cross-session recall of past
+prompts/turns), `.agent/skills/tool-provisioning/` (propose-only tool
+install/uninstall — never installs anything without explicit approval in
+the current conversation), and `.agent/skills/dev-recap/` (a closing recap
++ optional quiz so the developer understands what shipped, plus a
+project-familiarity profile asked once at first contact). All opt-in — see
+`AGENTS.md` §13–15 and their own `SKILL.md` files.

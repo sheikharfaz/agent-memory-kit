@@ -23,6 +23,7 @@ what exists. Do not use it to read a file you already have open.
 | "What endpoints exist?" | `routes` |
 | Before a multi-file edit | `impact` on every file you plan to touch |
 | After a big refactor | rebuild |
+| "Is this codebase growing/shrinking, where?" | `drift` (needs 2+ builds logged) |
 
 ## Commands
 
@@ -47,6 +48,7 @@ python .agent/skills/codebase-memory/query.py changed [--base <ref>]
 python .agent/skills/codebase-memory/query.py coverage <path>...
 python .agent/skills/codebase-memory/query.py orphans
 python .agent/skills/codebase-memory/query.py stats
+python .agent/skills/codebase-memory/query.py drift [--last N]
 ```
 
 Global flags: `--root <dir>` `--limit N` `--json`.
@@ -93,6 +95,10 @@ looks like a credential.
   `path:line`, its routes. Read on demand, never all of them.
 * `graph/{files,symbols,edges}.jsonl` + `manifest.json` — the machine index.
   **Never read these into context.** Query them.
+* `history/drift-log.jsonl` — one compact, derived-stats-only line appended
+  on every `build` (files/symbols/LOC totals, LOC by language and by
+  module — never file bodies). What `drift` reads. Never read directly;
+  query it.
 
 A module is the nearest ancestor directory containing a package manifest
 (`package.json`, `go.mod`, `pyproject.toml`, `Cargo.toml`, `pom.xml`, `*.csproj`

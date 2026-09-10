@@ -44,6 +44,26 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
   tracking; and a mandatory closing "assumptions & diversions" line, even
   when it's "none." Quiz/recap data stays local to the developer's own
   machine by design — see its SKILL.md's "AI ethics stance."
+- `dev-recap` project-familiarity profile ("new-hire week one" mode):
+  `recap_log.py set-familiarity --level new|some|veteran`, asked once per
+  project via `session-memory`'s `SessionStart` hook on first contact
+  (never again once answered), calibrating recap depth. Local only, never
+  aggregated or reported elsewhere.
+- `spec-first` skill: a PRD before Research and a TRD-quality bar on Plan
+  in the existing RPI workflow (`AGENTS.md` §5 renamed accordingly) --
+  writing requirements and a design before touching code, the way a
+  senior engineer works, instead of vibe coding. `spec_first.py`
+  scaffolds `PRD.md`/`TRD.md` templates and checks them (unchecked
+  acceptance criteria, unanswered open questions, missing TRD sections)
+  via markdown-structure parsing only -- the actual requirements/design
+  thinking stays the agent's job, same as `research.md` always was.
+- `codebase-memory` `drift` verb + automatic history logging: every
+  `index.py build` appends a compact, derived-stats-only snapshot to
+  `.agent/memory/history/drift-log.jsonl` (files/symbols/LOC totals, LOC
+  by language, LOC by module -- never file bodies), and
+  `query.py drift [--last N]` diffs two points in that history to show
+  what grew, what shrank, and which modules moved most. Deduplicates a
+  no-op rebuild automatically (same content-addressed generation).
 
 ### Fixed
 - `session-memory`'s `recent()` could return a session's *older* entry

@@ -3,18 +3,19 @@
 [![CI](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml)
 
 A drop-in `AGENTS.md` contract plus a local codebase index, for AI coding agents
-working in real repositories. Three opt-in extensions add cross-session
-continuity, propose-only tool provisioning, and a closing recap/quiz so the
-developer actually understands what an agent just shipped under their name —
-all on top of the same local-files approach.
+working in real repositories. Four opt-in extensions add cross-session
+continuity, propose-only tool provisioning, a PRD/TRD discipline in place of
+vibe coding, and a closing recap/quiz so the developer actually understands
+what an agent just shipped under their name — all on top of the same
+local-files approach.
 
 No MCP server. No daemon. No binary. No dependencies beyond Python 3.8+ —
 including the test suite (`tests/`, stdlib `unittest`). The core kit
 (`codebase-memory`) makes no network calls, period. The extensions below are
-opt-in and each documents its own, narrower trade-off: `session-memory` and
-`dev-recap` still make no network calls; `tool-provisioning` makes none
-either, except the install command you explicitly approve (or a `doctor`
-reachability probe that fetches nothing, or the one explicit
+opt-in and each documents its own, narrower trade-off: `session-memory`,
+`dev-recap`, and `spec-first` make no network calls at all; `tool-provisioning`
+makes none either, except the install command you explicitly approve (or a
+`doctor` reachability probe that fetches nothing, or the one explicit
 `sync-org-registry` command).
 
 Built with locked-down corporate machines in mind: nothing here needs admin
@@ -93,6 +94,7 @@ SECURITY.md                                     -> your repo root (kit's threat 
 .agent/skills/codebase-memory/query.py          -> your repo
 .agent/skills/session-memory/                   -> your repo   (opt-in, see below)
 .agent/skills/tool-provisioning/                -> your repo   (opt-in, see below)
+.agent/skills/spec-first/                       -> your repo   (opt-in, see below)
 .agent/skills/dev-recap/                        -> your repo   (opt-in, see below)
 ```
 
@@ -121,8 +123,16 @@ Then add to your project's `.gitignore`:
 | Risk of my current diff | `changed` |
 | Is this path even indexed? | `coverage <path>...` |
 | Possibly-unused symbols | `orphans` |
+| Is the codebase growing/shrinking, where? | `drift` (needs 2+ builds logged — see below) |
 
 All verbs accept `--limit N`, `--json`, and `--root <dir>`.
+
+`drift` compares the current build against a past one using
+`.agent/memory/history/drift-log.jsonl` — one compact, derived-stats-only
+entry appended automatically on every `build` (files/symbols/LOC totals,
+LOC by language, LOC by module; never file bodies). Shows what grew,
+what shrank, and which modules moved the most since your last build (or
+`--last N` builds ago). A no-op rebuild never adds a duplicate entry.
 
 ---
 
@@ -188,50 +198,91 @@ exist, what proxy env vars are set — so a developer on a locked-down network
 self-diagnoses in seconds instead of opening an IT ticket. Detail:
 [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md).
 
+## Extension: spec-first (PRD/TRD discipline, opt-in)
+
+The difference between a brilliant engineer using AI and someone vibe-coding
+with it isn't speed — it's that the brilliant one still writes down what
+they're building and why *before* they build it. This slots a PRD before
+Research and upgrades the Plan artifact to a real TRD in `AGENTS.md` §5's
+existing workflow, rather than replacing it:
+
+```
+PRD.md (what, why)  →  research.md (what exists)  →  TRD.md (how, why this way)  →  progress.md
+```
+
+`PRD.md` is skipped only for a genuinely trivial, already-unambiguous
+request — **not** just because the developer said "just implement it" for
+something that isn't actually unambiguous; surfacing that ambiguity is the
+point. `TRD.md` is what `plan.md` used to be, held to a stricter bar: real
+alternatives considered and why they were rejected (the actual tell of
+senior-engineer thinking), a testing strategy mapped to each PRD acceptance
+criterion, a rollback plan, and blast radius.
+
+```bash
+python .agent/skills/spec-first/spec_first.py scaffold auth-retry   # writes PRD.md + TRD.md templates
+python .agent/skills/spec-first/spec_first.py check auth-retry      # unchecked criteria, unanswered questions, missing TRD sections
+python .agent/skills/spec-first/spec_first.py list                  # what's in flight, which artifacts exist
+```
+
+The script only scaffolds structure and checks it's filled in — writing the
+actual requirements and design is real thinking, the same way `research.md`
+and `progress.md` always required real work, not a form. Detail:
+[`.agent/skills/spec-first/SKILL.md`](.agent/skills/spec-first/SKILL.md).
+
 ## Extension: dev-recap (closing recap + optional quiz, opt-in)
 
-The other two extensions make the agent faster and safer. This one exists
-because the developer didn't write the code an agent just shipped for
-them, and a fast, well-cited diff is not the same thing as an understood
-one — see the "AI ethics stance" in its `SKILL.md` for the reasoning.
+The other extensions make the agent faster, safer, and better-planned. This
+one exists because the developer didn't write the code an agent just
+shipped for them, and a fast, well-cited diff is not the same thing as an
+understood one — see the "AI ethics stance" in its `SKILL.md` for the
+reasoning.
 
 At the Definition of Done for anything beyond a one-line fix, the agent:
 gives a plain-English, junior-dev-pitched recap with `path:line` citations;
 grounds it in *this* repo's own conventions (`codebase-memory`, if built,
 or direct inspection otherwise); runs a heuristic gap scan; **genuinely
 offers** — never forces — a quiz or walkthrough; and always closes with an
-explicit **assumptions & diversions** line, even when it's "none."
+explicit **assumptions & diversions** line, even when it's "none." On the
+very first session in a repo, it's also the "new-hire week one" entry
+point: ask once how familiar the developer already is with *this* project,
+record it locally, and calibrate recap depth accordingly (a recorded
+veteran skips the 101-level framing).
 
 ```bash
 python .agent/skills/dev-recap/recap_log.py gaps                 # heuristic: missing tests, new TODOs, unindexed files
 python .agent/skills/dev-recap/recap_log.py record-recap --task auth-retry --files a.py,b.py --summary "..."
 python .agent/skills/dev-recap/recap_log.py record-quiz --topic auth-retry --result understood
 python .agent/skills/dev-recap/recap_log.py due-for-review        # spaced-repetition-lite: what's worth revisiting
+python .agent/skills/dev-recap/recap_log.py set-familiarity --level new|some|veteran
 ```
 
 The quiz questions themselves are generated live by the agent from the
 actual diff, not by a script — `recap_log.py` only logs the outcome
-(locally) and ranks what's worth a follow-up check-in later. Quiz results
-answer one question, for the developer alone: **nothing here reports
-results to a manager, a dashboard, or CI** — see the SKILL.md if you're
-tempted to wire it into something that would. `gaps` is a lead generator
-with the same accuracy contract as `codebase-memory`'s `orphans`: a clean
-result means the heuristic found nothing, never that nothing is missing.
-Detail: [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md).
+(locally) and ranks what's worth a follow-up check-in later. Quiz and
+familiarity data answer one question, for the developer alone: **nothing
+here reports results to a manager, a dashboard, or CI** — see the SKILL.md
+if you're tempted to wire it into something that would. `gaps` is a lead
+generator with the same accuracy contract as `codebase-memory`'s `orphans`:
+a clean result means the heuristic found nothing, never that nothing is
+missing. Detail: [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md).
 
 ---
 
 ## What the agent contract enforces
 
-`AGENTS.md` is loaded every turn, so it stays under ~4k tokens. It covers:
+`AGENTS.md` is loaded every turn, so it stays under ~5k tokens even with
+five skills' worth of contract folded in. It covers:
 
 - **Retrieval ladder** — map → query → shard → targeted grep → line range →
   whole file. Never more than 3 whole files before answering. Never a 1000+ line
   file in full.
 - **Evidence rules** — every claim about the repo carries `path:line`. No
   citation means the agent goes and looks.
-- **RPI workflow** — Research → Plan → Implement, each writing a durable
-  artifact under `.agent/work/<task-slug>/` that survives context compaction.
+- **PRD → Research → TRD → Implement** — a PRD before touching code (what,
+  why, acceptance criteria — skip only for a trivial, unambiguous request),
+  through to a TRD-quality plan (real alternatives rejected, not just the
+  one chosen), each a durable artifact under `.agent/work/<task-slug>/`
+  that survives context compaction.
 - **HVE gate** — Hypothesis → Verify → Evidence at every phase boundary.
   Unverified assumptions get labelled, never dropped.
 - **Command policy** — an explicit allow / ask-first / never list. `git push`,
@@ -309,17 +360,20 @@ Claude Code, Codex, Cursor, Zed, and most agent harnesses.
 `.github/copilot-instructions.md` is a thin pointer at the same contract so
 Copilot picks it up either way — you maintain one file, not two.
 
-`session-memory`'s automatic behaviour (the hooks) is Claude-Code-specific —
-that harness is what defines `SessionStart` / `UserPromptSubmit` / `Stop`
-hooks. Its `memory.py` CLI, `tool-provisioning`'s `toolkit.py`, and
-`dev-recap`'s `recap_log.py` are plain Python and work anywhere; other
+`session-memory`'s automatic behaviour (the hooks, and the familiarity
+nudge riding on `SessionStart`) is Claude-Code-specific — that harness is
+what defines `SessionStart` / `UserPromptSubmit` / `Stop` hooks. Its
+`memory.py` CLI, and `tool-provisioning`'s, `dev-recap`'s, and
+`spec-first`'s equivalents, are plain Python and work anywhere; other
 harnesses just have to invoke them by hand or via their own hook/skill
-mechanism instead of getting it for free. `dev-recap` in particular is just
-`AGENTS.md` §15 plus a CLI — no hooks needed at all, so it works in any
-harness that reads `AGENTS.md` the day you install it.
+mechanism instead of getting it for free. `dev-recap` and `spec-first` in
+particular are just `AGENTS.md` §5/§15 plus a CLI each — no hooks needed at
+all, so both work in any harness that reads `AGENTS.md` the day you install
+them.
 
-If you already run RPI chat modes, they compose directly: `AGENTS.md` §5 defines
-the same three phases and names the artifacts they should write.
+If you already run RPI-style chat modes, they compose directly: `AGENTS.md`
+§5 now adds a PRD step before Research and a TRD-quality bar on Plan, but
+names the same artifact slots.
 
 ---
 
@@ -340,10 +394,14 @@ shared vocabulary, not paraphrased meaning, and it is not reinforcement
 learning in the ML sense; see the extension section above. `tool-provisioning`
 is not a package manager or a sandbox — it never installs anything without an
 explicit yes from a human in the current chat, and it never uninstalls
-anything it didn't itself install. `dev-recap` is not a gate, a scorecard,
-or proof of correctness — the quiz is a comprehension check, not a test
-suite, and `gaps` is a heuristic lead, not a guarantee; nothing about it
-blocks a task or reports to anyone but the developer being recapped.
+anything it didn't itself install. `spec-first` is not a stage-gate or a
+template-filling exercise — a two-line TRD for a two-line change is
+correct, not lazy, and the PRD/TRD content itself is real thinking a script
+can't do for you. `dev-recap` is not a gate, a scorecard, or proof of
+correctness — the quiz is a comprehension check, not a test suite, `gaps`
+is a heuristic lead, not a guarantee, and the familiarity profile is for
+the developer's own benefit only; nothing about any of it blocks a task or
+reports to anyone else.
 
 ---
 

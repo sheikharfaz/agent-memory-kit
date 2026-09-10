@@ -123,6 +123,35 @@ class TestQuiz(TempRoot):
         self.assertEqual(rl.due_for_review(self.root), [])
 
 
+class TestFamiliarity(TempRoot):
+    def test_no_profile_returns_none(self):
+        self.assertIsNone(rl.current_familiarity(self.root))
+
+    def test_set_and_read_current(self):
+        rl.set_familiarity(self.root, "s", "new", notes="joined last week")
+        profile = rl.current_familiarity(self.root)
+        self.assertEqual(profile["level"], "new")
+        self.assertEqual(profile["notes"], "joined last week")
+
+    def test_latest_entry_wins_but_history_is_kept(self):
+        rl.set_familiarity(self.root, "s", "new")
+        rl.set_familiarity(self.root, "s", "veteran", notes="six months in now")
+        self.assertEqual(rl.current_familiarity(self.root)["level"], "veteran")
+        history = list(rl._load(rl.profile_path(self.root)))
+        self.assertEqual(len(history), 2)  # both kept, not overwritten
+
+    def test_invalid_level_rejected(self):
+        with self.assertRaises(ValueError):
+            rl.set_familiarity(self.root, "s", "expert-guru")
+
+    def test_stats_reports_current_familiarity(self):
+        rl.set_familiarity(self.root, "s", "some")
+        self.assertEqual(rl.stats(self.root)["familiarity"], "some")
+
+    def test_stats_familiarity_none_when_unset(self):
+        self.assertIsNone(rl.stats(self.root)["familiarity"])
+
+
 class TestGapsNotGitRepo(unittest.TestCase):
     def test_gaps_reports_not_applicable_outside_git(self):
         with tempfile.TemporaryDirectory() as d:

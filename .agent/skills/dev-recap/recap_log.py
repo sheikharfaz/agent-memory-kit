@@ -38,7 +38,9 @@ SCHEMA = 1
 LEARNING_SUBDIR = os.path.join(".agent", "memory", "learning")
 RECAP_FILE = "recap-log.jsonl"
 QUIZ_FILE = "quiz-log.jsonl"
+PROFILE_FILE = "profile-log.jsonl"
 DEFAULT_REVIEW_DAYS = 14
+FAMILIARITY_LEVELS = ("new", "some", "veteran")
 MAX_SUMMARY_CHARS = 4000
 CODE_EXTS = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".rb", ".php", ".java",
@@ -69,6 +71,10 @@ def recap_path(root):
 
 def quiz_path(root):
     return os.path.join(learning_dir(root), QUIZ_FILE)
+
+
+def profile_path(root):
+    return os.path.join(learning_dir(root), PROFILE_FILE)
 
 
 def _append(path, entry):
@@ -167,6 +173,27 @@ def due_for_review(root, limit=10, stale_days=DEFAULT_REVIEW_DAYS):
     return [{"topic": t, "score": sc, "last_reviewed": ts,
               "reason": "stale" if stale and not weak else ("weak" if weak and not stale else "stale+weak")}
              for sc, ts, t, stale, weak in due[:limit]]
+
+
+# ---------------------------------------------------------------- profile -
+
+def set_familiarity(root, session_id, level, notes=""):
+    """Record how familiar the developer says they are with *this specific
+    project* -- not a general skill rating. Append-only, like everything
+    else here: the latest entry is the current profile, older ones are kept
+    as history (a new hire becoming a veteran six months in is a real,
+    worth-keeping fact, not something to overwrite silently)."""
+    if level not in FAMILIARITY_LEVELS:
+        raise ValueError("level must be one of: %s" % ", ".join(FAMILIARITY_LEVELS))
+    entry = {"ts": _now(), "session_id": session_id or "unknown", "level": level,
+              "notes": (notes or "")[:1000]}
+    _append(profile_path(root), entry)
+    return entry
+
+
+def current_familiarity(root):
+    entries = list(_load(profile_path(root)))
+    return entries[-1] if entries else None
 
 
 # ------------------------------------------------------------------- gaps --
@@ -273,9 +300,11 @@ def gaps(root, base=None):
 def stats(root):
     recaps = list(_load(recap_path(root)))
     quizzes = list(_load(quiz_path(root)))
+    profile = current_familiarity(root)
     return {
         "schema": SCHEMA, "recaps": len(recaps), "quizzes": len(quizzes),
         "topics_tracked": len(topic_strength(root)),
+        "familiarity": profile.get("level") if profile else None,
         "recap_path": recap_path(root), "quiz_path": quiz_path(root),
     }
 
@@ -336,6 +365,25 @@ def cmd_gaps(args):
             print("    index: %s" % item["not_in_codebase_index"])
 
 
+def cmd_set_familiarity(args):
+    root = find_repo_root(args.root)
+    e = set_familiarity(root, args.session, args.level, args.notes)
+    print(json.dumps(e, sort_keys=True))
+
+
+def cmd_get_familiarity(args):
+    root = find_repo_root(args.root)
+    profile = current_familiarity(root)
+    if args.json:
+        print(json.dumps(profile))
+        return
+    if not profile:
+        print("no familiarity profile recorded yet for this project")
+        return
+    print("%s (recorded %s%s)" % (profile["level"], profile["ts"],
+                                    ", notes: %s" % profile["notes"] if profile.get("notes") else ""))
+
+
 def cmd_stats(args):
     root = find_repo_root(args.root)
     s = stats(root)
@@ -360,6 +408,16 @@ def main():
     rq.add_argument("--result", required=True, choices=list(QUIZ_SCORES))
     rq.add_argument("--notes", default="")
     rq.set_defaults(func=cmd_record_quiz)
+
+    sf_ = sub.add_parser("set-familiarity")
+    sf_.add_argument("--session", default="cli")
+    sf_.add_argument("--level", required=True, choices=list(FAMILIARITY_LEVELS))
+    sf_.add_argument("--notes", default="")
+    sf_.set_defaults(func=cmd_set_familiarity)
+
+    gf = sub.add_parser("get-familiarity")
+    gf.add_argument("--json", action="store_true")
+    gf.set_defaults(func=cmd_get_familiarity)
 
     d = sub.add_parser("due-for-review")
     d.add_argument("--limit", type=int, default=10)

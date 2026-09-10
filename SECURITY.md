@@ -21,6 +21,7 @@ under their own OS-level permissions.
 | `session-memory` (`memory.py`, hooks) | its own local log | only `.agent/memory/session/` | **none, ever** |
 | `tool-provisioning` (`toolkit.py`) | its own registry/ledger | only `.agent/memory/tools/` | **only** the install/uninstall command a human approved in chat, plus `doctor`'s bare TCP reachability probes (nothing sent or fetched), plus the one explicit `sync-org-registry` command if a developer runs it |
 | `dev-recap` (`recap_log.py`) | `git diff` output, its own logs, `codebase-memory`'s index if present | only `.agent/memory/learning/` | **none, ever** |
+| `spec-first` (`spec_first.py`) | its own PRD.md/TRD.md files, `git` (none directly — reads via the agent's own tool use) | only `.agent/work/<task-slug>/` (the same directory RPI already used) | **none, ever** |
 
 Nothing here phones home, collects telemetry, or uploads anything by itself.
 Every network-capable action is either a command a human explicitly
@@ -87,16 +88,19 @@ Consequences:
 
 ## Data classification — `dev-recap`
 
-`.agent/memory/learning/` holds recap summaries and self-reported quiz
-results (`understood`/`partial`/`confused` plus optional free-text notes).
-This is explicitly **not** a performance-tracking or manager-visibility
-feature — see the "AI ethics stance" in
-`.agent/skills/dev-recap/SKILL.md`. It exists for one purpose: letting the
-same developer's next session know what's worth reinforcing. Nothing here
-aggregates results across developers, exports them, or is designed to be
-read by anyone but the developer whose machine it's on. If your org wants
-learning analytics, that is a different, opt-in feature this kit does not
-provide — do not build it by silently piping this file somewhere else.
+`.agent/memory/learning/` holds recap summaries, self-reported quiz results
+(`understood`/`partial`/`confused` plus optional free-text notes), and a
+project-familiarity profile (`new`/`some`/`veteran`, asked once per project
+at first contact — see `session-memory`'s `SessionStart` hook). This is
+explicitly **not** a performance-tracking or manager-visibility feature —
+see the "AI ethics stance" in `.agent/skills/dev-recap/SKILL.md`. It exists
+for one purpose: letting the same developer's next session know what's
+worth reinforcing, or how much explanation they actually need. Nothing
+here aggregates results across developers, exports them, or is designed to
+be read by anyone but the developer whose machine it's on. If your org
+wants learning analytics or a skills matrix, that is a different, opt-in
+feature this kit does not provide — do not build it by silently piping
+this data somewhere else.
 
 ## Governance for `tool-provisioning`
 

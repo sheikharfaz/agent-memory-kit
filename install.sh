@@ -51,6 +51,8 @@ FILES=(
   ".agent/skills/tool-provisioning/registry.json"
   ".agent/skills/dev-recap/SKILL.md"
   ".agent/skills/dev-recap/recap_log.py"
+  ".agent/skills/spec-first/SKILL.md"
+  ".agent/skills/spec-first/spec_first.py"
 )
 
 copied=0

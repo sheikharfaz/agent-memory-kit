@@ -4,8 +4,9 @@ Operating contract for any AI coding agent working in this repository.
 Applies to GitHub Copilot (agent mode), Claude Code, Codex, Cursor, and anything
 else that reads `AGENTS.md`.
 
-This file is loaded on every turn, so it stays under ~4k tokens. Detail lives in
-skills under `.agent/skills/`, loaded only when the trigger fires.
+This file is loaded on every turn, so it stays under ~5k tokens even with five
+skills' worth of contract folded in. Detail lives in skills under
+`.agent/skills/`, loaded only when the trigger fires.
 
 **Precedence, highest first:** an explicit instruction from the developer in this
 session → this file → `.agent/memory/` → repo docs and code comments → your
@@ -46,7 +47,7 @@ A one-time local index gives you the repo's shape without reading it.
     graph/*.jsonl          generated  machine index (never read wholesale)
     NOTES.md               durable    facts you verified, one line each
     decisions/ADR-*.md     durable    architecture decisions and their reasons
-  work/<task-slug>/        per task   research.md · plan.md · progress.md
+  work/<task-slug>/        per task   PRD.md · research.md · TRD.md · progress.md
   skills/codebase-memory/  the indexer + query CLI
 ```
 
@@ -88,6 +89,7 @@ answers in ~0.1s. Use it instead of grep for anything structural.
 | Risk of my current diff | `changed` |
 | Is this path even indexed? | `coverage <path>...` |
 | Possibly-unused symbols | `orphans` |
+| Is the codebase growing/shrinking, where? | `drift` (needs 2+ builds logged) |
 
 All verbs accept `--limit N` and `--json`.
 
@@ -131,11 +133,22 @@ Hard rules:
 
 ---
 
-## 5. RPI workflow with the HVE gate
+## 5. PRD → Research → TRD → Implement, with the HVE gate
 
-For anything larger than a one-file edit, run **Research → Plan → Implement**,
-each producing a durable markdown artifact under `.agent/work/<task-slug>/`.
-These artifacts are the handoff between phases and survive context compaction.
+For anything beyond a one-file, already-unambiguous fix, work like a senior
+engineer using AI deliberately, not a vibe-coder using it to skip thinking:
+capture intent before exploring, design before editing. Four phases, each a
+durable markdown artifact under `.agent/work/<task-slug>/` that survives
+context compaction and hands off to the next phase.
+
+### PRD → `PRD.md` — what, and why
+Skip only for a genuinely trivial, already-unambiguous request (rename X to
+Y, fix the typo on line 12) — **not** just because the developer said "just
+implement it" for something that isn't actually unambiguous; surface the
+ambiguity instead of guessing. Problem and who it affects, current vs
+desired behaviour, testable acceptance criteria, explicit non-goals, open
+questions — ask the developer rather than guess. Full template:
+`.agent/skills/spec-first/SKILL.md`.
 
 ### Research → `research.md`
 Map what exists. Do not propose, do not fix, do not rewrite. Output:
@@ -145,17 +158,21 @@ already in the code, and open questions. Distil the repo down to *where the next
 phase should read*. Cite everything. Finish by listing what you could not
 determine.
 
-### Plan → `plan.md`
-Turn research into phases with checkpoints. Each phase states: intent, files it
-touches, the change, how it is verified, and how to roll it back. Order phases so
-the tree builds and tests pass at every phase boundary. Flag anything that
-touches a hub symbol from the map. **Stop and get approval before implementing.**
+### Plan → `TRD.md` — how, and why this way
+The chosen approach; **real alternatives considered and why they were
+rejected** (the actual tell of senior-engineer thinking vs. vibe coding);
+files/interfaces/edge cases touched; a testing strategy mapped explicitly
+to each `PRD.md` acceptance criterion; a rollback plan; blast radius
+(`query.py impact`, flag any hub symbol). **Stop and get approval before
+implementing.**
 
 ### Implement → `progress.md`
 Execute one phase at a time. After each phase: run the verification for that
 phase, append the result to `progress.md`, and stop for review before the next.
-If reality contradicts the plan, adapt while preserving intent — update
-`plan.md` and say what changed and why. Do not silently freestyle a new design.
+Verify the final result against `PRD.md`'s acceptance criteria, not just
+"it builds." If reality contradicts the plan, adapt while preserving intent —
+update `TRD.md` and say what changed and why. Do not silently freestyle a new
+design.
 
 ### The HVE gate
 Applies at every phase boundary and before any claim of completion:
@@ -342,6 +359,11 @@ own conventions (via `codebase-memory` if built here, else direct
 inspection per §6), run `python .agent/skills/dev-recap/recap_log.py gaps`
 and report what it finds honestly, then genuinely offer — never force — a
 quiz or walkthrough to help it stick. Close every time with an
-**Assumptions & diversions** line, even when it's "none." Ethics rationale,
-the exact recap template, and why quiz results never leave the developer's
-own machine: `.agent/skills/dev-recap/SKILL.md`.
+**Assumptions & diversions** line, even when it's "none." At session start,
+if no project-familiarity profile exists yet
+(`recap_log.py get-familiarity`), ask once — new to this project, some
+familiarity, or veteran — and record it; a recorded `veteran` means you can
+skip 101-level framing in the recap and go straight to the diff and
+decisions. Ethics rationale, the exact recap template, and why quiz/profile
+data never leaves the developer's own machine:
+`.agent/skills/dev-recap/SKILL.md`.

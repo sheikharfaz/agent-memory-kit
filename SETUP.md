@@ -27,7 +27,9 @@ copies everything, including these, by default):
 .agent/skills/tool-provisioning/toolkit.py     search/plan/install/uninstall CLI
 .agent/skills/tool-provisioning/registry.json  curated tool registry
 .agent/skills/dev-recap/SKILL.md               the skill definition
-.agent/skills/dev-recap/recap_log.py           recap/quiz/gap-scan CLI
+.agent/skills/dev-recap/recap_log.py           recap/quiz/gap-scan/familiarity CLI
+.agent/skills/spec-first/SKILL.md               the skill definition
+.agent/skills/spec-first/spec_first.py         PRD/TRD scaffold + check CLI
 ```
 
 ## 2. Build the index once
@@ -70,13 +72,15 @@ VS Code Copilot reads `.github/copilot-instructions.md` automatically, and
 recent versions also read `AGENTS.md`. The Copilot file is a thin pointer, so
 either path works and you are not maintaining two contracts.
 
-If you already run RPI chat modes (`research`, `plan`, `implement`), they compose
-directly — `AGENTS.md` §5 defines the same three phases and names the artifacts
-they should write:
+If you already run RPI-style chat modes (`research`, `plan`, `implement`),
+they compose directly — `AGENTS.md` §5 defines the same shape, now with a
+PRD step before Research and a TRD-quality bar on the Plan artifact (see
+`.agent/skills/spec-first/`), and names the artifacts to write:
 
 ```
+.agent/work/<task-slug>/PRD.md
 .agent/work/<task-slug>/research.md
-.agent/work/<task-slug>/plan.md
+.agent/work/<task-slug>/TRD.md
 .agent/work/<task-slug>/progress.md
 ```
 
@@ -183,6 +187,31 @@ index (if built) — install all three for the full effect. Read
 whichever agent/IDE you're using — it explains why the quiz/walkthrough
 offer must always stay optional and why results never leave the
 developer's own machine.
+
+On first-ever session in a repo (if `session-memory`'s hooks are also wired
+up — step 6), the agent is nudged to ask, once, how familiar the developer
+already is with *this* project and record it:
+
+```bash
+python .agent/skills/dev-recap/recap_log.py set-familiarity --level new|some|veteran
+python .agent/skills/dev-recap/recap_log.py get-familiarity
+```
+
+Never asked again once it's set. Without the hooks wired up, nothing asks
+automatically, but the recap still reads whatever's recorded.
+
+## 9. Optional: spec-first
+
+A PRD before Research, and a TRD in place of a plain `plan.md`, for anything
+beyond a one-file, unambiguous fix — see `AGENTS.md` §5 and
+`.agent/skills/spec-first/SKILL.md`. Nothing to wire up; scaffold and check
+the artifacts as you go:
+
+```bash
+python .agent/skills/spec-first/spec_first.py scaffold <task-slug>
+python .agent/skills/spec-first/spec_first.py check <task-slug>
+python .agent/skills/spec-first/spec_first.py list
+```
 
 ## Very large repositories
 

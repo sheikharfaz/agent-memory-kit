@@ -645,12 +645,64 @@ def build(args):
         json.dump(stats, fh, indent=2, sort_keys=True)
         fh.write("\n")
 
+    append_drift_snapshot(root, stats, file_recs)
     render(mem, mod_dir, stats, file_recs, sym_recs, edge_recs, routes_all, module_of)
     sys.stderr.write(
         "codebase-memory: %d files, %d parsed, %d symbols, %d edges in %.1fs -> .agent/memory/\n"
         % (stats["files_total"], stats["files_parsed"], stats["symbols"],
            stats["edges"], stats["elapsed_s"]))
     return 0
+
+
+DRIFT_LOG_PATH = os.path.join("history", "drift-log.jsonl")
+DRIFT_LOG_MAX_ENTRIES = 500  # ~one per build; capped so it never grows unbounded
+
+
+def append_drift_snapshot(root, stats, file_recs):
+    """One compact line per build under .agent/memory/history/drift-log.jsonl
+    -- derived counts only (module -> LOC, LOC by language, totals), never
+    file bodies, same write discipline as the rest of this indexer. This is
+    what `query.py drift` reads to show how the codebase's shape has changed
+    build over build. Skips a duplicate entry if this generation was already
+    the most recent one logged (a `verify`-triggered no-op rebuild)."""
+    path = os.path.join(root, ".agent", "memory", DRIFT_LOG_PATH)
+    entries = []
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    if entries and entries[-1].get("generation") == stats["generation"]:
+        return
+
+    mod_loc = Counter()
+    for r in file_recs:
+        mod_loc[r.get("mod", "")] += r.get("loc", 0)
+
+    entries.append({
+        "generation": stats["generation"],
+        "ts": stats["generated_at"],
+        "files_total": stats["files_total"],
+        "files_parsed": stats["files_parsed"],
+        "symbols": stats["symbols"],
+        "edges": stats["edges"],
+        "loc_total": sum(stats["loc_by_lang"].values()),
+        "loc_by_lang": stats["loc_by_lang"],
+        "modules": dict(mod_loc),
+    })
+    entries = entries[-DRIFT_LOG_MAX_ENTRIES:]
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        for e in entries:
+            fh.write(json.dumps(e, sort_keys=True) + "\n")
+    os.replace(tmp, path)
 
 
 def write_jsonl(path, recs):

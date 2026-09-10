@@ -9,6 +9,7 @@ the unit tests (which import modules directly) wouldn't.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -111,6 +112,38 @@ class TestSessionMemoryHooksAcrossSessions(TempRepo):
             r = run([sys.executable, os.path.join(self.hooks, hook)],
                     cwd=self.repo, input_text="not json {{{")
             self.assertEqual(r.returncode, 0, "%s should fail open" % hook)
+
+
+class TestFamiliarityNudge(TempRepo):
+    def setUp(self):
+        super().setUp()
+        run([sys.executable, os.path.join(KIT_ROOT, "install.py"), self.repo])
+        self.session_start = os.path.join(self.repo, ".agent", "skills", "session-memory",
+                                           "hooks", "session_start.py")
+
+    def _run_session_start(self, session_id="sessA"):
+        payload = json.dumps({"session_id": session_id, "cwd": self.repo})
+        return run([sys.executable, self.session_start], cwd=self.repo, input_text=payload)
+
+    def test_nudge_fires_on_first_session_when_dev_recap_present(self):
+        r = self._run_session_start()
+        self.assertEqual(r.returncode, 0)
+        self.assertTrue(r.stdout.strip())
+        out = json.loads(r.stdout)
+        self.assertIn("familiarity", out["hookSpecificOutput"]["additionalContext"])
+
+    def test_nudge_absent_once_profile_is_set(self):
+        recap = os.path.join(self.repo, ".agent", "skills", "dev-recap", "recap_log.py")
+        run([sys.executable, recap, "set-familiarity", "--level", "veteran"], cwd=self.repo)
+        r = self._run_session_start()
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")
+
+    def test_nudge_absent_when_dev_recap_not_installed(self):
+        shutil.rmtree(os.path.join(self.repo, ".agent", "skills", "dev-recap"))
+        r = self._run_session_start()
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")
 
 
 class TestToolkitCliSmoke(TempRepo):

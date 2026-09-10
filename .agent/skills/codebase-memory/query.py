@@ -303,6 +303,84 @@ def cmd_stats(g, args):
     print(json.dumps(g.man, indent=1, sort_keys=True))
 
 
+def cmd_drift(g, args):
+    """Compare codebase shape across builds: files/symbols/LOC growth, and
+    which modules grew or shrank most. Reads .agent/memory/history/drift-log.jsonl
+    -- one compact entry per `index.py build`, oldest to newest -- so this
+    needs at least two builds logged to say anything. --last N scopes the
+    comparison to the most recent N builds instead of full history."""
+    hist_path = os.path.join(os.path.dirname(g.gdir), "history", "drift-log.jsonl")
+    if not os.path.exists(hist_path):
+        print("no build history yet -- drift needs at least two `index.py build` runs "
+              "to compare (history starts accumulating from your next build).")
+        return
+    entries = []
+    with open(hist_path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    if args.last:
+        entries = entries[-args.last:]
+
+    if len(entries) < 2:
+        print("only %d build(s) logged so far -- run `index.py build` again later "
+              "to see drift." % len(entries))
+        if args.json:
+            print(json.dumps(entries, indent=1))
+        return
+
+    first, last = entries[0], entries[-1]
+    if args.json:
+        print(json.dumps({"from": first, "to": last}, indent=1))
+        return
+
+    print("comparing generation %s (%s) -> %s (%s)" % (
+        first["generation"], first["ts"], last["generation"], last["ts"]))
+    print("files:   %+d  (%d -> %d)" % (
+        last["files_total"] - first["files_total"], first["files_total"], last["files_total"]))
+    print("parsed:  %+d" % (last["files_parsed"] - first["files_parsed"]))
+    print("symbols: %+d  (%d -> %d)" % (
+        last["symbols"] - first["symbols"], first["symbols"], last["symbols"]))
+    print("LOC:     %+d  (%d -> %d)" % (
+        last["loc_total"] - first["loc_total"], first["loc_total"], last["loc_total"]))
+
+    def top_deltas(a, b):
+        keys = set(a) | set(b)
+        deltas = [(b.get(k, 0) - a.get(k, 0), k) for k in keys]
+        deltas = [d for d in deltas if d[0] != 0]
+        deltas.sort(key=lambda t: -abs(t[0]))
+        return deltas
+
+    lang_deltas = top_deltas(first.get("loc_by_lang", {}), last.get("loc_by_lang", {}))
+    print()
+    print("by language:")
+    if not lang_deltas:
+        print("  (no change)")
+    for d, lang in lang_deltas[: args.limit]:
+        print("  %+7d  %s" % (d, lang))
+
+    mod_deltas = top_deltas(first.get("modules", {}), last.get("modules", {}))
+    print()
+    print("modules that grew/shrank most (by LOC):")
+    if not mod_deltas:
+        print("  (no module changed)")
+    for d, mod in mod_deltas[: args.limit]:
+        print("  %+7d  %s" % (d, mod or "(root)"))
+
+    new_mods = set(last.get("modules", {})) - set(first.get("modules", {}))
+    gone_mods = set(first.get("modules", {})) - set(last.get("modules", {}))
+    if new_mods:
+        print()
+        print("new modules: %s" % ", ".join(sorted(new_mods)))
+    if gone_mods:
+        print("removed modules: %s" % ", ".join(sorted(gone_mods)))
+
+
 # ------------------------------------------------------------------- main ---
 
 def main():
@@ -342,6 +420,9 @@ def main():
     p.add_argument("paths", nargs="+")
     add("orphans", cmd_orphans)
     add("stats", cmd_stats)
+    p = add("drift", cmd_drift)
+    p.add_argument("--last", type=int, default=None,
+                    help="only compare within the last N logged builds (default: full history)")
 
     args = ap.parse_args()
     g = Graph(find_graph(args.root))
