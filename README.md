@@ -3,6 +3,17 @@
 **Give your AI coding assistant a memory, a spine, and good manners.**
 
 [![CI](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
+![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)
+![Network calls: none by default](https://img.shields.io/badge/network%20calls-none%20by%20default-brightgreen)
+
+[What it does](#what-is-this-in-plain-english) ·
+[Who it's for](#who-its-for) ·
+[Requirements](#requirements) ·
+[Quick start](#quick-start) ·
+[Enterprise readiness](#enterprise-readiness) ·
+[Security](SECURITY.md) ·
+[Documentation](#documentation)
 
 ## What is this, in plain English?
 
@@ -29,6 +40,13 @@ no data leaving your computer.
 - **Developers** who use an AI coding assistant daily and are tired of
   re-explaining the same context every session — or a little worried they
   don't actually understand all the code that's shipped in their name.
+- **Employees at large or regulated companies** who want to use an AI
+  coding assistant productively but can't install arbitrary software,
+  don't have admin rights on their work laptop, and don't want to wait on
+  an IT ticket or a security exception just to get started. This kit is
+  built specifically so you don't have to ask permission to try it — see
+  [Requirements](#requirements) and [Enterprise readiness](#enterprise-readiness)
+  below.
 - **Engineering leads, IT, and security teams**, especially at companies
   where employees can't freely install software, who want AI-assisted
   coding to be safe, auditable, and not require a procurement process of
@@ -36,6 +54,18 @@ no data leaving your computer.
 - **Anyone asking "is it actually safe to let AI write code here"** — this
   kit is built to answer that question honestly; see
   [SECURITY.md](SECURITY.md) for the full, plain-language case.
+
+## Requirements
+
+| Needs | Notes |
+|---|---|
+| **Python 3.8 or newer** | The only hard requirement. Every script is standard-library only — nothing to `pip install` for the core kit. |
+| **git** *(recommended, not required)* | Used to honour `.gitignore` and to power diff-based features (`query.py changed`, `dev-recap`'s `gaps`). Without it, indexing still works via a plain filesystem walk — you just lose those git-aware features. |
+| **Any OS** | macOS, Linux, or Windows. On Windows, use `install.py` (or `py`/`python`) if your PowerShell execution policy blocks `.ps1` scripts — see [Quick start](#quick-start). |
+| **Claude Code** *(optional)* | Only needed for `session-memory`'s automatic hooks and the "new-hire" familiarity nudge. Everything else works by hand, or via any harness that reads `AGENTS.md` (GitHub Copilot, Cursor, Codex, Zed, …). |
+
+Nothing else. No API key, no account, no subscription, no server to stand
+up, no admin/root access at any point.
 
 ## What you get, one line each
 
@@ -50,6 +80,45 @@ no data leaving your computer.
 If none of that sounds like your problem, the rest of this README goes
 deep on how it works. If it does, the [Quick start](#quick-start) below
 takes about a minute.
+
+## Enterprise readiness
+
+This kit was designed around one constraint: **a developer at a large or
+regulated company should be able to adopt it without asking anyone for
+permission.** That shapes everything else about it.
+
+- **No admin rights, ever.** Every install writes to your own user account
+  or the project directory — nothing needs `sudo`, nothing needs a
+  Windows admin prompt.
+- **No new vendor to onboard.** There's no company behind this collecting
+  your data, no SaaS product to run past procurement, no data-processing
+  agreement to negotiate, no subscription to expense. It's files, on your
+  machine, under the MIT license.
+- **No telemetry, ever.** Nothing phones home. Nothing is uploaded. The
+  only network calls this kit ever makes are an install command you
+  explicitly approve, a connectivity check that fetches nothing, and one
+  explicit org-policy sync command — see
+  [SECURITY.md](SECURITY.md#components-and-their-networkwrite-surface)
+  for the exact list, per skill.
+- **An audit trail when you need one.** Every tool install/uninstall is
+  logged locally to an append-only ledger with a best-effort software bill
+  of materials, exportable as a portable report for a compliance review.
+- **Central policy without central control of every keystroke.** An IT or
+  security team can drop a single read-only policy file that allowlists or
+  denylists specific tools, or routes installs through an internal package
+  mirror — and no individual project can override that policy.
+- **A one-sitting security review.** [SECURITY.md](SECURITY.md) is short
+  enough to read end to end in about ten minutes: exactly what's read,
+  what's written, and what (if anything) ever leaves the machine.
+
+|  | This kit | A typical hosted AI-memory / context SaaS |
+|---|---|---|
+| Your code/prompts leave your machine? | Never | Usually, to the vendor's servers |
+| New vendor / procurement review needed? | No | Yes |
+| Needs admin rights to install? | No | Often (agents, browser extensions, services) |
+| Ongoing cost? | None — MIT licensed | Per-seat or usage-based subscription |
+| Can IT set a central policy? | Yes — a local, read-only policy file | Depends on the vendor's admin console |
+| Audit trail? | Yes — local, append-only, exportable | Depends on the vendor's logging tier |
 
 ---
 
@@ -68,9 +137,8 @@ network calls at all; `tool-provisioning` makes none either, except the
 install command you explicitly approve (or a `doctor` reachability probe
 that fetches nothing, or the one explicit `sync-org-registry` command).
 
-Built with locked-down corporate machines in mind: nothing here needs admin
-rights, IT provisioning, or a procurement/security review beyond reading
-[SECURITY.md](SECURITY.md) — see that file for the full threat model.
+See [Enterprise readiness](#enterprise-readiness) above and
+[SECURITY.md](SECURITY.md) for the full threat model.
 
 ---
 
@@ -488,6 +556,16 @@ See [SECURITY.md](SECURITY.md) for the full threat model, data-flow table,
 and what's explicitly out of scope. Short version: no telemetry, no network
 calls except a command you approve, nothing written outside `.agent/memory/`
 and `.agent/work/`, zero third-party dependencies.
+
+## Documentation
+
+| Start here | Go deeper |
+|---|---|
+| [AGENTS.md](AGENTS.md) — the operating contract | [SETUP.md](SETUP.md) — full install/wiring walkthrough |
+| [SECURITY.md](SECURITY.md) — threat model & data flow | [CHANGELOG.md](CHANGELOG.md) — version history |
+| [`.agent/skills/codebase-memory/SKILL.md`](.agent/skills/codebase-memory/SKILL.md) | [`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md) |
+| [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md) | [`.agent/skills/spec-first/SKILL.md`](.agent/skills/spec-first/SKILL.md) |
+| [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md) | `tests/` — the test suite is also readable documentation of expected behaviour |
 
 ## Contributing
 
