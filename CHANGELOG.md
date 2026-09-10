@@ -5,7 +5,7 @@ package registry exists for this kit (it's copied via `install.sh`/
 `install.ps1`/`install.py`), so "release" means a tagged commit a team can
 pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
 
-## [0.2.0] — unreleased
+## [0.2.0] — 2026-09-10
 
 ### Added
 - `session-memory` skill: cross-session recall of prompts/turns via local
