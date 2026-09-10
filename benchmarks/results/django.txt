@@ -7,5 +7,5 @@ file       What does db/models/query.py contain and depe        30408          4
 impact     What breaks if db/models/base.py changes?            54063          979
 
 TOTAL (naive):                167437 tokens
-TOTAL (kit, map read once):   4706 tokens (2987 map + 1719 queries)
-ratio: naive used 35.6x more tokens than the kit-assisted session
+TOTAL (kit, map read once):   4631 tokens (2912 map + 1719 queries)
+ratio: naive used 36.2x more tokens than the kit-assisted session

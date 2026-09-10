@@ -1,8 +1,8 @@
 {
   "repo": "django/django",
   "counter": "chars/4 heuristic (tiktoken not installed)",
-  "build_seconds": 4.13,
-  "codebase_map_tokens": 2987,
+  "build_seconds": null,
+  "codebase_map_tokens": 2912,
   "questions": [
     {
       "id": "def-queryset",
@@ -39,7 +39,7 @@
   ],
   "totals": {
     "naive_tokens": 167437,
-    "kit_tokens": 4706,
+    "kit_tokens": 4631,
     "kit_tokens_excl_map": 1719
   }
 }

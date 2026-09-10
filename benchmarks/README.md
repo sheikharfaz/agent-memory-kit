@@ -21,8 +21,8 @@ provider's pricing bills against — not model behaviour or answer quality.
 
 | Repo | Files (parsed) | Symbols | Index build | `CODEBASE_MAP.md` | Naive tokens (4 questions) | Kit-assisted tokens | Ratio |
 |---|---|---|---|---|---|---|---|
-| [psf/requests](https://github.com/psf/requests) | 118 (37) | 797 | 0.15s | 1,323 | 85,220 | 1,939 | **44.0x** |
-| [django/django](https://github.com/django/django) | 6,904 (2,979) | 43,170 | 4.13s | 2,987 | 167,437 | 4,706 | **35.6x** |
+| [psf/requests](https://github.com/psf/requests) | 118 (37) | 797 | 0.22s | 1,051 | 85,220 | 1,667 | **51.1x** |
+| [django/django](https://github.com/django/django) | 6,904 (2,979) | 43,170 | 4.43s | 2,912 | 167,437 | 4,631 | **36.2x** |
 
 Raw output: [`results/requests.json`](results/requests.json) ·
 [`results/django.json`](results/django.json) ·
