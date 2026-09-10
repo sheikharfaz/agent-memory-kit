@@ -2,21 +2,20 @@
 
 [![CI](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml)
 
-A drop-in `AGENTS.md` contract plus a local codebase index, for AI coding agents
-working in real repositories. Four opt-in extensions add cross-session
-continuity, propose-only tool provisioning, a PRD/TRD discipline in place of
-vibe coding, and a closing recap/quiz so the developer actually understands
-what an agent just shipped under their name — all on top of the same
-local-files approach.
+A drop-in `AGENTS.md` contract, a local codebase index, and four focused
+companion skills — cross-session continuity, propose-only tool access, a
+PRD/TRD discipline in place of vibe coding, and a closing recap so the
+developer understands what an agent just shipped under their name — for AI
+coding agents working in real repositories. Install the whole kit, or just
+the pieces you want.
 
 No MCP server. No daemon. No binary. No dependencies beyond Python 3.8+ —
-including the test suite (`tests/`, stdlib `unittest`). The core kit
-(`codebase-memory`) makes no network calls, period. The extensions below are
-opt-in and each documents its own, narrower trade-off: `session-memory`,
-`dev-recap`, and `spec-first` make no network calls at all; `tool-provisioning`
-makes none either, except the install command you explicitly approve (or a
-`doctor` reachability probe that fetches nothing, or the one explicit
-`sync-org-registry` command).
+including the test suite (`tests/`, stdlib `unittest`). `codebase-memory`
+makes no network calls, period. Every other skill documents its own,
+narrower trade-off: `session-memory`, `dev-recap`, and `spec-first` make no
+network calls at all; `tool-provisioning` makes none either, except the
+install command you explicitly approve (or a `doctor` reachability probe
+that fetches nothing, or the one explicit `sync-org-registry` command).
 
 Built with locked-down corporate machines in mind: nothing here needs admin
 rights, IT provisioning, or a procurement/security review beyond reading
@@ -29,7 +28,9 @@ rights, IT provisioning, or a procurement/security review beyond reading
 An agent dropped into an unfamiliar repository explores by grepping and reading
 files. On a large codebase that burns tens of thousands of tokens before it has
 answered anything, and it still hallucinates paths and symbols because nothing
-grounds it.
+grounds it. Left unguided, it also skips straight to code without writing down
+what it's building or why, ships a diff the developer never really understood,
+and reaches for whatever library seems convenient without asking.
 
 ## The approach
 
@@ -42,9 +43,20 @@ tiers, from cheapest to most expensive:
 | Shard | `.agent/memory/modules/<slug>.md` | ~2–7k tokens | After narrowing to one module |
 | Graph | `.agent/memory/graph/*.jsonl` | ~200 tokens per query | Never read — queried via CLI |
 
-Then give the agent a contract (`AGENTS.md`) that makes it climb that ladder from
-the top, cite `path:line` for every claim, and verify before declaring anything
-done.
+Then give the agent a contract (`AGENTS.md`) that makes it climb that ladder
+from the top, cite `path:line` for every claim, and verify before declaring
+anything done.
+
+Five focused skills sit on that foundation, each independently installable,
+composing into one lifecycle rather than five separate tools bolted together:
+
+| Stage | Skill | What it gives you |
+|---|---|---|
+| Every session | `codebase-memory` | The index above — grounded answers, no hallucinated paths |
+| Across sessions | `session-memory` | Local recall of past prompts and turns, so a new session picks up where the last one left off |
+| Before touching code | `spec-first` | A PRD (what, why) and a TRD (how, and real alternatives rejected) instead of vibe coding |
+| When a task needs a tool | `tool-provisioning` | Propose → approve → install → use → uninstall, with a full local audit ledger |
+| Closing out | `dev-recap` | A plain-English recap, a gap scan, and an optional quiz so the developer actually understands what shipped |
 
 Reference numbers from the test suite: 286k LOC indexed in 2.0s single-threaded,
 producing a 1,650-token map. Structural queries return in ~0.1s.
@@ -129,14 +141,14 @@ All verbs accept `--limit N`, `--json`, and `--root <dir>`.
 
 `drift` compares the current build against a past one using
 `.agent/memory/history/drift-log.jsonl` — one compact, derived-stats-only
-entry appended automatically on every `build` (files/symbols/LOC totals,
-LOC by language, LOC by module; never file bodies). Shows what grew,
-what shrank, and which modules moved the most since your last build (or
-`--last N` builds ago). A no-op rebuild never adds a duplicate entry.
+entry appended on every `build` (files/symbols/LOC totals, LOC by language,
+LOC by module; never file bodies). Shows what grew, what shrank, and which
+modules moved the most since your last build (or `--last N` builds ago). A
+no-op rebuild never adds a duplicate entry.
 
 ---
 
-## Extension: session-memory (cross-session continuity, opt-in)
+## session-memory — cross-session continuity
 
 `codebase-memory` knows the *code*. `session-memory` knows the
 *conversation* — an append-only local log of prompts and turns, searched by
@@ -148,8 +160,8 @@ python .agent/skills/session-memory/memory.py recall "what we discussed about au
 python .agent/skills/session-memory/memory.py recent
 ```
 
-Wire it into Claude Code's `SessionStart` / `UserPromptSubmit` / `Stop` hooks
-(`bash install.sh . --wire-hooks`, or by hand — see SETUP.md) and it runs
+Wired into Claude Code's `SessionStart` / `UserPromptSubmit` / `Stop` hooks
+(`bash install.sh . --wire-hooks`, or by hand — see SETUP.md), it runs
 without being invoked: every prompt is recorded and matched against every
 earlier session's entries in this repo, with related hits injected as
 context automatically. This is the "sits between the calls" behaviour — the
@@ -167,7 +179,7 @@ one-variable org-wide kill switch if a compliance policy requires one.
 Detail:
 [`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md).
 
-## Extension: tool-provisioning (propose-only, opt-in)
+## tool-provisioning — propose-only tool access
 
 Detects that a task needs a tool/library/MCP server, and — **only after you
 approve it in chat** — installs it, lets the agent use it, then uninstalls
@@ -198,13 +210,12 @@ exist, what proxy env vars are set — so a developer on a locked-down network
 self-diagnoses in seconds instead of opening an IT ticket. Detail:
 [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md).
 
-## Extension: spec-first (PRD/TRD discipline, opt-in)
+## spec-first — PRD/TRD instead of vibe coding
 
 The difference between a brilliant engineer using AI and someone vibe-coding
 with it isn't speed — it's that the brilliant one still writes down what
-they're building and why *before* they build it. This slots a PRD before
-Research and upgrades the Plan artifact to a real TRD in `AGENTS.md` §5's
-existing workflow, rather than replacing it:
+they're building and why *before* they build it. `AGENTS.md` §5 defines the
+workflow this backs: a PRD before Research, and a TRD-quality Plan artifact.
 
 ```
 PRD.md (what, why)  →  research.md (what exists)  →  TRD.md (how, why this way)  →  progress.md
@@ -213,10 +224,10 @@ PRD.md (what, why)  →  research.md (what exists)  →  TRD.md (how, why this w
 `PRD.md` is skipped only for a genuinely trivial, already-unambiguous
 request — **not** just because the developer said "just implement it" for
 something that isn't actually unambiguous; surfacing that ambiguity is the
-point. `TRD.md` is what `plan.md` used to be, held to a stricter bar: real
-alternatives considered and why they were rejected (the actual tell of
-senior-engineer thinking), a testing strategy mapped to each PRD acceptance
-criterion, a rollback plan, and blast radius.
+point. `TRD.md` holds the design to a stricter bar than a bare
+implementation plan: real alternatives considered and why they were
+rejected (the actual tell of senior-engineer thinking), a testing strategy
+mapped to each PRD acceptance criterion, a rollback plan, and blast radius.
 
 ```bash
 python .agent/skills/spec-first/spec_first.py scaffold auth-retry   # writes PRD.md + TRD.md templates
@@ -229,11 +240,11 @@ actual requirements and design is real thinking, the same way `research.md`
 and `progress.md` always required real work, not a form. Detail:
 [`.agent/skills/spec-first/SKILL.md`](.agent/skills/spec-first/SKILL.md).
 
-## Extension: dev-recap (closing recap + optional quiz, opt-in)
+## dev-recap — closing recap and optional quiz
 
-The other extensions make the agent faster, safer, and better-planned. This
-one exists because the developer didn't write the code an agent just
-shipped for them, and a fast, well-cited diff is not the same thing as an
+The other skills make the agent faster, safer, and better-planned. This one
+exists because the developer didn't write the code an agent just shipped
+for them, and a fast, well-cited diff is not the same thing as an
 understood one — see the "AI ethics stance" in its `SKILL.md` for the
 reasoning.
 
@@ -270,8 +281,8 @@ missing. Detail: [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SK
 
 ## What the agent contract enforces
 
-`AGENTS.md` is loaded every turn, so it stays under ~5k tokens even with
-five skills' worth of contract folded in. It covers:
+`AGENTS.md` is loaded every turn and stays under ~5k tokens covering all
+five skills' worth of contract. It defines:
 
 - **Retrieval ladder** — map → query → shard → targeted grep → line range →
   whole file. Never more than 3 whole files before answering. Never a 1000+ line
@@ -321,9 +332,10 @@ result means *no recorded gap*, never *proven complete*.
 
 ## Privacy and safety
 
-- No network access in either script. Nothing is uploaded, phoned home, or
+- No network access in the core scripts. Nothing is uploaded, phoned home, or
   logged off-machine.
-- Writes are confined to `.agent/memory/`. Verified by md5-diffing every other
+- Writes are confined to `.agent/memory/` (and, for `spec-first`, the
+  already-established `.agent/work/`). Verified by md5-diffing every other
   file in the tree across a build.
 - Secrets are excluded structurally, not heuristically: `.env*`, `*.pem`,
   `*.key`, keystores, `*.tfstate`, `kubeconfig*`, and anything matching
@@ -360,20 +372,20 @@ Claude Code, Codex, Cursor, Zed, and most agent harnesses.
 `.github/copilot-instructions.md` is a thin pointer at the same contract so
 Copilot picks it up either way — you maintain one file, not two.
 
-`session-memory`'s automatic behaviour (the hooks, and the familiarity
-nudge riding on `SessionStart`) is Claude-Code-specific — that harness is
-what defines `SessionStart` / `UserPromptSubmit` / `Stop` hooks. Its
-`memory.py` CLI, and `tool-provisioning`'s, `dev-recap`'s, and
-`spec-first`'s equivalents, are plain Python and work anywhere; other
-harnesses just have to invoke them by hand or via their own hook/skill
-mechanism instead of getting it for free. `dev-recap` and `spec-first` in
-particular are just `AGENTS.md` §5/§15 plus a CLI each — no hooks needed at
-all, so both work in any harness that reads `AGENTS.md` the day you install
-them.
+`session-memory`'s automatic behaviour (the hooks, and the familiarity nudge
+riding on `SessionStart`) is Claude-Code-specific — that harness is what
+defines `SessionStart` / `UserPromptSubmit` / `Stop` hooks. Its `memory.py`
+CLI, and `tool-provisioning`'s, `dev-recap`'s, and `spec-first`'s
+equivalents, are plain Python and work anywhere; other harnesses just have
+to invoke them by hand or via their own hook/skill mechanism instead of
+getting it for free. `dev-recap` and `spec-first` in particular are just
+`AGENTS.md` §5/§15 plus a CLI each — no hooks needed at all, so both work
+in any harness that reads `AGENTS.md`.
 
-If you already run RPI-style chat modes, they compose directly: `AGENTS.md`
-§5 now adds a PRD step before Research and a TRD-quality bar on Plan, but
-names the same artifact slots.
+If you already run RPI-style chat modes (research/plan/implement), they
+compose directly: `AGENTS.md` §5 defines a PRD step before Research and a
+TRD-quality bar on Plan, with the same artifact slots your chat modes
+already expect.
 
 ---
 
@@ -391,8 +403,8 @@ minutes.
 
 `session-memory` is not semantic search either — its TF-IDF recall matches
 shared vocabulary, not paraphrased meaning, and it is not reinforcement
-learning in the ML sense; see the extension section above. `tool-provisioning`
-is not a package manager or a sandbox — it never installs anything without an
+learning in the ML sense; see its section above. `tool-provisioning` is not
+a package manager or a sandbox — it never installs anything without an
 explicit yes from a human in the current chat, and it never uninstalls
 anything it didn't itself install. `spec-first` is not a stage-gate or a
 template-filling exercise — a two-line TRD for a two-line change is
@@ -412,19 +424,19 @@ python3 -m unittest discover -s tests -v
 ```
 
 Stdlib `unittest` only — no `pytest`, no test dependencies to install, so
-the "zero dependencies" claim holds for development too. Covers
-`memory.py`/`toolkit.py` unit-level (tokenizing, redaction, ranking, org
-policy, ledger semantics) plus subprocess-level smoke tests that run the
-actual installers and hooks the way a real user would. CI
-(`.github/workflows/ci.yml`) runs the same suite on Ubuntu/Windows/macOS
+the "zero dependencies" claim holds for development too. Covers every
+skill's engine at the unit level (tokenizing, redaction, ranking, org
+policy, ledger semantics, PRD/TRD parsing) plus subprocess-level smoke
+tests that run the actual installers and hooks the way a real user would.
+CI (`.github/workflows/ci.yml`) runs the same suite on Ubuntu/Windows/macOS
 across Python 3.8 and 3.12 on every push and PR.
 
 ## For security/procurement reviewers
 
 See [SECURITY.md](SECURITY.md) for the full threat model, data-flow table,
 and what's explicitly out of scope. Short version: no telemetry, no network
-calls except a command you approve, nothing written outside `.agent/memory/`,
-zero third-party dependencies.
+calls except a command you approve, nothing written outside `.agent/memory/`
+and `.agent/work/`, zero third-party dependencies.
 
 ## Contributing
 
