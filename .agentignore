@@ -1,0 +1,5 @@
+# codebase-memory excludes .agent/skills/ by default (it's usually a
+# *vendored* copy of this kit's own scripts in a consumer repo, not that
+# repo's own source -- see index.py's discover()). This IS that repo: the
+# one place .agent/skills/ genuinely is the source, so opt back in.
+!.agent/skills/

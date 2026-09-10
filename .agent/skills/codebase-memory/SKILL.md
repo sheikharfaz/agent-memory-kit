@@ -80,6 +80,22 @@ docs/legacy/**
 generated/
 ```
 
+`.agent/skills/` is excluded by default too, for a specific reason: in a
+repo that has `agent-memory-kit` installed, it's usually a *vendored* copy
+of this kit's own scripts, not that repo's own source, and indexing it
+buries a small project's real code under this tool's internals.
+`.agent/memory/` (this indexer's own output, plus session-memory/
+tool-provisioning/dev-recap's local logs) is the one exclusion with no
+override, ever — `.agentignore` cannot reach it. Everything else,
+including `.agent/skills/`, can be opted back in with a `!` (negation)
+line — the one real case for this is `agent-memory-kit`'s own repo, where
+`.agent/skills/` genuinely is hand-written source:
+
+```
+# .agentignore
+!.agent/skills/
+```
+
 Secrets are excluded structurally, not heuristically: `.env*`, `*.pem`, `*.key`,
 keystores, `*.tfstate`, `kubeconfig*`, and anything matching `*secret*` or
 `*credential*` are never opened. The indexer writes paths, symbol names, and

@@ -73,11 +73,18 @@ class TestCodebaseMemorySmoke(unittest.TestCase):
 
 
 class TestAgentDirIndexing(unittest.TestCase):
-    """Regression coverage for a real bug: .agent was originally a blanket
-    hard-denied directory NAME, which also hid .agent/skills/ (hand-written
-    source -- this is where every skill in this very kit lives) and
-    .agent/work/ (PRD/TRD/research docs). Only .agent/memory/ (generated
-    output + local logs) should ever be excluded."""
+    """.agent/skills/ is excluded from indexing by default: in the
+    overwhelmingly common case it holds *vendored* copies of this kit's own
+    scripts (installed into a consumer repo), not that repo's own source,
+    and indexing them buries a small project's real code under this tool's
+    internals -- confirmed directly against a real consumer-style repo
+    (linkshrink-agent-memory-kit) whose map was ~93% kit-internal LOC
+    before this fix. .agent/work/ (PRD/TRD/research docs -- always the
+    repo's own content, never vendored) stays indexed by default.
+    .agent/memory/ (generated output + local logs) stays excluded
+    unconditionally, with no override -- see load_agentignore's docstring.
+    A repo that *does* want .agent/skills/ indexed (this kit's own repo is
+    the one real case) opts back in via `.agentignore`'s `!.agent/skills/`."""
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -95,29 +102,102 @@ class TestAgentDirIndexing(unittest.TestCase):
         with open(full, "w", encoding="utf-8") as fh:
             fh.write(content)
 
-    def test_agent_skills_source_is_indexed_but_agent_memory_is_not(self):
+    def _commit_and_build(self):
+        run(["git", "add", "-A"], cwd=self.repo)
+        run(["git", "-c", "user.email=t@example.com", "-c", "user.name=T",
+             "commit", "-q", "-m", "add files"], cwd=self.repo)
+        r = run([sys.executable, INDEX_PY, "build"], cwd=self.repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(os.path.join(self.repo, ".agent", "memory", "graph", "files.jsonl")) as fh:
+            return [json.loads(l)["p"] for l in fh]
+
+    def test_agent_skills_excluded_by_default_agent_work_is_not(self):
         self.write(".agent/skills/my-skill/thing.py", "def real_source_symbol():\n    pass\n")
         self.write(".agent/work/task-1/PRD.md", "# PRD\n")
         # Simulate the generated/private output tree a previous build (or
         # session-memory/tool-provisioning/dev-recap) would have left behind.
         self.write(".agent/memory/graph/files.jsonl", '{"p": "bogus"}\n')
         self.write(".agent/memory/session/entries.jsonl", '{"text": "private prompt text"}\n')
-        run(["git", "add", "-A"], cwd=self.repo)
-        run(["git", "-c", "user.email=t@example.com", "-c", "user.name=T",
-             "commit", "-q", "-m", "add files"], cwd=self.repo)
+        paths = self._commit_and_build()
 
-        r = run([sys.executable, INDEX_PY, "build"], cwd=self.repo)
-        self.assertEqual(r.returncode, 0, r.stderr)
-
-        with open(os.path.join(self.repo, ".agent", "memory", "graph", "files.jsonl")) as fh:
-            paths = [json.loads(l)["p"] for l in fh]
-        self.assertIn(".agent/skills/my-skill/thing.py", paths)
+        self.assertNotIn(".agent/skills/my-skill/thing.py", paths)
         self.assertIn(".agent/work/task-1/PRD.md", paths)
         self.assertFalse(any(p.startswith(".agent/memory/") for p in paths),
                           "the indexer must never index its own .agent/memory/ tree")
 
+    def test_agentignore_negation_opts_agent_skills_back_in(self):
+        self.write(".agent/skills/my-skill/thing.py", "def real_source_symbol():\n    pass\n")
+        self.write(".agentignore", "!.agent/skills/\n")
+        paths = self._commit_and_build()
+
+        self.assertIn(".agent/skills/my-skill/thing.py", paths)
+
         r = run([sys.executable, QUERY_PY, "def", "real_source_symbol"], cwd=self.repo)
         self.assertIn("thing.py", r.stdout)
+
+    def test_agentignore_negation_cannot_reach_agent_memory(self):
+        self.write(".agent/memory/graph/files.jsonl", '{"p": "bogus"}\n')
+        self.write(".agentignore", "!.agent/memory/\n")
+        paths = self._commit_and_build()
+
+        self.assertFalse(any(p.startswith(".agent/memory/") for p in paths),
+                          ".agent/memory/ must stay excluded even if .agentignore tries to negate it")
+
+
+class TestMapCompactness(unittest.TestCase):
+    """CODEBASE_MAP.md's fixed-overhead sections (Hubs, empty modules) were
+    tightened so they don't dominate the map for a small repo -- confirmed
+    against a real one (linkshrink-agent-memory-kit) where the pre-fix map
+    was ~4.5k chars for a ~275-LOC app, mostly noise. These lock in the two
+    specific behaviours that made the difference."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = self._tmp.name
+        run(["git", "init", "-q", "."], cwd=self.repo)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write(self, rel, content):
+        full = os.path.join(self.repo, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w", encoding="utf-8") as fh:
+            fh.write(content)
+
+    def build(self):
+        run(["git", "add", "-A"], cwd=self.repo)
+        run(["git", "-c", "user.email=t@example.com", "-c", "user.name=T",
+             "commit", "-q", "-m", "init"], cwd=self.repo)
+        r = run([sys.executable, INDEX_PY, "build"], cwd=self.repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(os.path.join(self.repo, ".agent", "memory", "CODEBASE_MAP.md")) as fh:
+            return fh.read()
+
+    def test_single_caller_symbols_are_not_listed_as_hubs(self):
+        self.write("a.py", "def helper():\n    pass\n\ndef main():\n    helper()\n")
+        map_text = self.build()
+        self.assertNotIn("## Hubs", map_text)  # only 1 caller each -- not a hub
+
+    def test_two_caller_symbol_is_listed_as_a_hub(self):
+        # names must be 2+ chars (extractor filters shorter ones as noise),
+        # and callers module the graph counts distinct *files* that call a
+        # symbol, not distinct call sites -- two callers in the same file
+        # would still show indegree 1, so this needs two separate files.
+        self.write("shared.py", "def helper():\n    pass\n")
+        self.write("a.py", "from shared import helper\ndef aaa():\n    helper()\n")
+        self.write("b.py", "from shared import helper\ndef bbb():\n    helper()\n")
+        map_text = self.build()
+        self.assertIn("## Hubs", map_text)
+        self.assertIn("helper", map_text)
+
+    def test_modules_with_no_parsed_code_are_summarized_not_tabled(self):
+        self.write("app/a.py", "def f():\n    pass\n")
+        self.write("docs/readme.md", "# hello\n")
+        map_text = self.build()
+        self.assertIn("| `app`", map_text)          # real code -> full table row
+        self.assertNotIn("| `docs`", map_text)       # no parsed code -> not a table row
+        self.assertIn("no parsed code", map_text)    # but still mentioned
 
 
 class TestJsonFlagCleanliness(unittest.TestCase):

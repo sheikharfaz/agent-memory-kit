@@ -33,6 +33,7 @@ DEFAULT_MAX_LINE = 2_000          # a longer line means minified/generated
 CALLS_AUTO_LIMIT = 25_000         # above this many files, call edges are opt-in
 MAP_MODULE_LIMIT = 60
 SHARD_SYMBOL_LIMIT = 400
+MIN_HUB_CALLERS = 2               # a symbol called from exactly one place isn't a hub
 
 # ---------------------------------------------------------------- discovery --
 
@@ -164,15 +165,27 @@ def lang_of(rel):
 
 
 def load_agentignore(root):
-    pats = []
+    """Returns (deny_patterns, allow_patterns). A `!pattern` line is an
+    allow/negation entry -- gitignore-style -- the one way to opt a path
+    back in that would otherwise be denied by HARD_DENY_DIRS, a plain deny
+    pattern, or the default .agent/skills/ exclusion (see
+    _under_agent_skills). It can NEVER re-include .agent/memory/: that
+    exclusion is unconditional, because repo content (including this file)
+    is data an agent must not let override where private local logs go --
+    see AGENTS.md §1.4."""
+    deny, allow = [], []
     p = os.path.join(root, ".agentignore")
     if os.path.exists(p):
         with open(p, "r", encoding="utf-8", errors="replace") as fh:
             for line in fh:
                 line = line.strip()
-                if line and not line.startswith("#"):
-                    pats.append(line.rstrip("/"))
-    return pats
+                if not line or line.startswith("#"):
+                    continue
+                if line.startswith("!"):
+                    allow.append(line[1:].rstrip("/"))
+                else:
+                    deny.append(line.rstrip("/"))
+    return deny, allow
 
 
 def matches_any(rel, pats):
@@ -200,7 +213,17 @@ def _under_agent_memory(rel):
     return rel == ".agent/memory" or rel.startswith(".agent/memory/")
 
 
+def _under_agent_skills(rel):
+    return rel == ".agent/skills" or rel.startswith(".agent/skills/")
+
+
 def walk_files(root):
+    # Fallback for a non-git tree. Prunes whole directories during the walk
+    # for speed, so it never learns about a path discover() would otherwise
+    # filter in/out individually -- in particular, an .agentignore
+    # `!.agent/skills/` negation only takes effect in a git repo (where
+    # git_files() hands discover() every tracked path up front); outside
+    # git, .agent/ is pruned here before that override could ever apply.
     acc = []
     for dirpath, dirnames, filenames in os.walk(root):
         rel_dir = os.path.relpath(dirpath, root).replace("\\", "/")
@@ -223,6 +246,16 @@ def walk_files(root):
 
 
 def discover(root, extra_ignores):
+    """extra_ignores is (deny_patterns, allow_patterns) from
+    load_agentignore(). .agent/skills/ is excluded by default -- in the
+    overwhelmingly common case, it holds *vendored* copies of this kit's
+    own scripts (installed by install.sh/.ps1/.py into a consumer repo),
+    not that repo's own source, and indexing them buries a small project's
+    real code under this tool's own internals. The one real exception is
+    this kit's own repo, where .agent/skills/ genuinely is the source --
+    it opts back in via .agentignore's `!.agent/skills/`. .agent/memory/
+    has no such override; see load_agentignore's docstring for why."""
+    deny_pats, allow_pats = extra_ignores
     files = git_files(root)
     used_git = files is not None
     if not used_git:
@@ -232,11 +265,15 @@ def discover(root, extra_ignores):
         rel = rel.replace("\\", "/")
         if _under_agent_memory(rel):
             continue
-        parts = rel.split("/")
-        if any(p in HARD_DENY_DIRS for p in parts[:-1]):
-            continue
-        if extra_ignores and matches_any(rel, extra_ignores):
-            continue
+        allowed = allow_pats and matches_any(rel, allow_pats)
+        if not allowed:
+            if _under_agent_skills(rel):
+                continue
+            parts = rel.split("/")
+            if any(p in HARD_DENY_DIRS for p in parts[:-1]):
+                continue
+            if deny_pats and matches_any(rel, deny_pats):
+                continue
         if os.path.splitext(rel)[1].lower() in BINARY_EXT:
             continue
         if is_secret_path(rel):
@@ -771,12 +808,9 @@ def render(mem, mod_dir, stats, file_recs, sym_recs, edge_recs, routes_all, modu
     A("")
     A("## How to use this file")
     A("")
-    A("1. Read this map first. It is the cheapest view of the repo.")
-    A("2. Narrow to a module, then open `.agent/memory/modules/<slug>.md`.")
-    A("3. For a symbol, run `query.py def|who-calls|calls-of <name>` instead of grepping.")
-    A("4. Only then open source files, and only the line ranges you need.")
-    A("")
-    A("Absence of a symbol here is **not** proof it does not exist — see Coverage.")
+    A("Map → module shard (`modules/<slug>.md`) → `query.py` verb → a source "
+      "line range, in that order. Absence here is **not** proof of absence — "
+      "see Coverage.")
     A("")
     A("## Stack")
     A("")
@@ -798,20 +832,36 @@ def render(mem, mod_dir, stats, file_recs, sym_recs, edge_recs, routes_all, modu
         if len(set(routes_all)) > 60:
             A("- …%d more, see module shards" % (len(set(routes_all)) - 60))
         A("")
+    # A module with 0 LOC and 0 symbols has no code in it (docs/config/data
+    # only, e.g. a markdown-only directory) -- its shard would be nearly
+    # empty too. Naming it in one line costs far less than a full table row
+    # while losing nothing a code-oriented map needs.
+    code_mods = [(n, m) for n, m in mods_sorted if m["loc"] or m["syms"]]
+    empty_mods = [n for n, m in mods_sorted if not m["loc"] and not m["syms"]]
     A("## Modules (%d) — largest first" % len(by_mod))
     A("")
-    A("| module | files | LOC | symbols | shard |")
-    A("|---|---:|---:|---:|---|")
-    for name, m in mods_sorted[:MAP_MODULE_LIMIT]:
-        A("| `%s` | %d | %s | %d | [`%s.md`](modules/%s.md) |"
-          % (name, len(m["files"]), f'{m["loc"]:,}', len(m["syms"]),
-             slug(name), slug(name)))
-    if len(mods_sorted) > MAP_MODULE_LIMIT:
+    if code_mods:
+        A("| module | files | LOC | symbols | shard |")
+        A("|---|---:|---:|---:|---|")
+        for name, m in code_mods[:MAP_MODULE_LIMIT]:
+            A("| `%s` | %d | %s | %d | [`%s.md`](modules/%s.md) |"
+              % (name, len(m["files"]), f'{m["loc"]:,}', len(m["syms"]),
+                 slug(name), slug(name)))
+        if len(code_mods) > MAP_MODULE_LIMIT:
+            A("")
+            A("_%d smaller modules omitted; every module still has a shard in `modules/`._"
+              % (len(code_mods) - MAP_MODULE_LIMIT))
+    if empty_mods:
         A("")
-        A("_%d smaller modules omitted; every module still has a shard in `modules/`._"
-          % (len(mods_sorted) - MAP_MODULE_LIMIT))
+        A("_+%d module(s) with no parsed code (shard in `modules/` has the file list)._"
+          % len(empty_mods))
     A("")
-    hubs = [(indeg[s["id"]], s) for s in sym_recs if indeg.get(s["id"])]
+    # A symbol with exactly 1 caller isn't a hub by any reasonable reading
+    # of the word -- it's just a normal function call. Flagging it as
+    # "change carefully" alongside genuine hot spots dilutes the signal
+    # this section exists to carry (worse on a small repo, where almost
+    # everything looks like a "hub" under a >=1 threshold).
+    hubs = [(indeg[s["id"]], s) for s in sym_recs if indeg.get(s["id"], 0) >= MIN_HUB_CALLERS]
     hubs.sort(key=lambda t: -t[0])
     if hubs:
         A("## Hubs — most-called symbols (change these carefully)")
@@ -829,19 +879,16 @@ def render(mem, mod_dir, stats, file_recs, sym_recs, edge_recs, routes_all, modu
         A("")
     A("## Coverage and limits")
     A("")
-    A("- Discovery: `%s`. Parsed %d of %d files."
-      % (stats["discovery"], stats["files_parsed"], stats["files_total"]))
-    if stats["skipped"]:
-        A("- Skipped: " + ", ".join("%s=%d" % (k, v) for k, v in sorted(stats["skipped"].items())))
-    A("- Call edges: `%s`. %d resolved, %d call sites left unresolved because the "
-      "name was ambiguous across files." % (stats["calls_mode"], stats["call_edges"],
-                                            stats["ambiguous_calls"]))
-    A("- Symbols come from language-aware pattern matching, not a full compiler "
-      "front end. Dynamic dispatch, macros, reflection, code generation and "
-      "string-built calls are invisible to it.")
-    A("- **A clean result means \"no recorded gap\", never \"proven complete\".** "
-      "Before any claim that something does not exist, confirm with a direct "
-      "search over the relevant paths and say which paths you covered.")
+    skip_note = (" (skipped " + ", ".join("%s=%d" % (k, v) for k, v in sorted(stats["skipped"].items())) + ")") \
+        if stats["skipped"] else ""
+    A("- Discovery: `%s`. Parsed %d of %d files%s."
+      % (stats["discovery"], stats["files_parsed"], stats["files_total"], skip_note))
+    A("- Call edges (`%s`): %d resolved, %d unresolved (ambiguous name)."
+      % (stats["calls_mode"], stats["call_edges"], stats["ambiguous_calls"]))
+    A("- Pattern-matched, not compiler-accurate: dynamic dispatch, macros, "
+      "reflection, codegen, and string-built calls are invisible to it.")
+    A("- **Clean ≠ proof of absence.** Confirm with a direct search over the "
+      "relevant paths before any \"there is no X\" claim.")
     A("")
     with open(os.path.join(mem, "CODEBASE_MAP.md"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(L))

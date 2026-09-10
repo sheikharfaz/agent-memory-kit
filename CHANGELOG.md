@@ -14,6 +14,39 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
   grep-and-read naive baseline. Run against `psf/requests` and
   `django/django`; results and full methodology in `benchmarks/README.md`,
   summarized in the main README's new "Proof" section.
+- `.agentignore` now supports `!pattern` negation lines (gitignore-style),
+  the one way to opt a path back in that the default rules would otherwise
+  exclude. It can never reach `.agent/memory/` -- that exclusion is
+  unconditional, on purpose (see below).
+
+### Changed
+- `index.py`: `.agent/skills/` is excluded from indexing **by default**.
+  This reverses an earlier fix in this same unreleased range (below) --
+  the corrected understanding, found by building two real projects with
+  the kit installed
+  ([linkshrink-agent-memory-kit](https://github.com/sheikharfaz/linkshrink-agent-memory-kit)):
+  in the overwhelmingly common case, `.agent/skills/` holds a *vendored*
+  copy of this kit's own scripts (put there by `install.sh`/`.ps1`/`.py`),
+  not the consumer repo's own source, and indexing it buries a small
+  project's real code under this tool's own internals -- one demo repo's
+  map was ~93% kit-internal LOC before this change. `.agent/work/`
+  (PRD/TRD/research docs, always the repo's own content, never vendored)
+  stays indexed by default. This kit's own repo -- the one real exception,
+  where `.agent/skills/` genuinely is the source -- opts back in via the
+  new `.agentignore` negation support (see its own `.agentignore`).
+- `CODEBASE_MAP.md`'s fixed-overhead sections were tightened without
+  dropping any of the information they carry: the "How to use this file"
+  and "Coverage and limits" prose is denser; modules with zero parsed
+  symbols are summarized in one line instead of a full table row each;
+  and the "Hubs" section now requires 2+ callers (a symbol called from
+  exactly one place isn't a hub by any reasonable reading of the word, and
+  including it was pure noise, worst on a small repo where nearly
+  everything has exactly one caller). Combined with the `.agent/skills/`
+  fix above, this took `linkshrink-agent-memory-kit`'s per-session map
+  cost from being the largest reason a kit-assisted session cost *more*
+  tokens than an unaided one, to the kit-assisted total coming in below
+  the baseline overall -- see that repo's `SESSION_LOG.md`/`COMPARISON.md`
+  for the exact before/after numbers.
 
 ### Fixed
 - `query.py`: `--root <path>` (and `--json`/`--limit`) silently reset to
@@ -23,14 +56,14 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
   and a shared flag definition on both levels let the subparser's default
   clobber a value already set. Found via the benchmarks script, which
   calls verbs exactly this way.
-- `index.py`: `.agent` was a blanket hard-denied directory name, which also
-  hid `.agent/skills/` (hand-written source -- every skill in this kit
-  lives there) and `.agent/work/` (PRD/TRD/research docs) from the index,
+- `index.py`: `.agent` was originally a blanket hard-denied directory
+  name, which also hid `.agent/skills/` and `.agent/work/` from the index,
   not just the intended target, `.agent/memory/` (generated output plus
-  session-memory/tool-provisioning/dev-recap's local logs). Exclusion is
-  now a path-prefix check scoped to `.agent/memory/` specifically. Found by
-  running this kit's own benchmark against its own repo and noticing the
-  map only saw 27 files where ~44 were expected.
+  session-memory/tool-provisioning/dev-recap's local logs). First fixed by
+  scoping the exclusion to `.agent/memory/` specifically -- which was
+  itself half right, corrected above once the consumer-repo case surfaced.
+  `.agent/memory/`'s exclusion has stayed a hard, unconditional path-prefix
+  check throughout.
 - `query.py`: several verbs (`def`, `callers`, `search`, `importers`,
   `routes`, `orphans`) printed a trailing human-readable summary/caveat
   line even when `--json` was set, producing output that wasn't valid JSON
