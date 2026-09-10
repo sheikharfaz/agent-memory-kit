@@ -290,3 +290,40 @@ decision, the alternatives rejected, the consequences. Never rewrite an old ADR
 [ ] cite path:line for every claim
 [ ] pass the HVE gate before declaring anything done
 ```
+
+---
+
+## 13. Session memory — cross-session continuity (opt-in)
+
+If `.agent/skills/session-memory/hooks/` are wired into `.claude/settings.json`
+(see SETUP.md), every prompt and turn in this repo is logged locally to
+`.agent/memory/session/entries.jsonl` and searched by lexical (TF-IDF)
+similarity — a session that starts after an earlier, separate one ended can
+recall what that session established, without either of you re-explaining
+it. Not wired in? Use it by hand:
+`python .agent/skills/session-memory/memory.py recall "<topic>"` or `recent`.
+
+This is lexical similarity, not a trained semantic model. A recalled entry
+means "something was said," not "this is true of the codebase" — it is a
+lead, cross-check it the way you would any `NOTES.md` entry tagged
+`[stated]` rather than `[verified]`. Full detail, privacy notes, and
+troubleshooting: `.agent/skills/session-memory/SKILL.md`.
+
+## 14. Tool provisioning — propose-only, opt-in
+
+Before reaching for a library or MCP server that might not already be
+available, run:
+
+```bash
+python .agent/skills/tool-provisioning/toolkit.py search "<what the task needs>"
+python .agent/skills/tool-provisioning/toolkit.py plan <name>
+```
+
+Both are read-only — they print the exact install/uninstall commands and a
+risk note, they never run them. Follow §8's command policy exactly: state
+what `plan` printed and get explicit developer approval in this chat before
+`install <name>`, then `uninstall <name>` (or `sweep`) once the task is
+done. `uninstall` refuses to touch anything not in its own ledger
+(`.agent/memory/tools/tool-ledger.jsonl`), so it can never be talked into
+removing something that was already there. Full detail:
+`.agent/skills/tool-provisioning/SKILL.md`.

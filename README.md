@@ -1,10 +1,15 @@
 # agent-memory-kit
 
 A drop-in `AGENTS.md` contract plus a local codebase index, for AI coding agents
-working in real repositories.
+working in real repositories. Two opt-in extensions add cross-session
+continuity and propose-only tool provisioning on top of the same local-files
+approach.
 
-No MCP server. No daemon. No binary. No network calls. No dependencies beyond
-Python 3.8+. Two scripts and four markdown files that you copy into any repo.
+No MCP server. No daemon. No binary. No dependencies beyond Python 3.8+. The
+core kit (`codebase-memory`) makes no network calls, period. The two
+extensions below are opt-in and each documents its own, narrower trade-off:
+`session-memory` still makes no network calls; `tool-provisioning` makes none
+either, except the install command you explicitly approve.
 
 ---
 
@@ -44,6 +49,10 @@ bash /path/to/agent-memory-kit/install.sh .
 python .agent/skills/codebase-memory/index.py build
 ```
 
+Add `--wire-hooks` to also register `session-memory`'s Claude Code hooks
+(`bash /path/to/agent-memory-kit/install.sh . --wire-hooks`) — optional, and
+safe to run later once you've read [SETUP.md](SETUP.md).
+
 Windows PowerShell:
 
 ```powershell
@@ -56,19 +65,22 @@ python .agent\skills\codebase-memory\index.py build
 Or copy the files by hand — that is all the installer does:
 
 ```
-AGENTS.md                                  -> your repo root
-SETUP.md                                   -> your repo root
-.github/copilot-instructions.md            -> your repo
-.agent/skills/codebase-memory/SKILL.md     -> your repo
-.agent/skills/codebase-memory/index.py     -> your repo
-.agent/skills/codebase-memory/query.py     -> your repo
+AGENTS.md                                       -> your repo root
+SETUP.md                                        -> your repo root
+.github/copilot-instructions.md                 -> your repo
+.agent/skills/codebase-memory/SKILL.md          -> your repo
+.agent/skills/codebase-memory/index.py          -> your repo
+.agent/skills/codebase-memory/query.py          -> your repo
+.agent/skills/session-memory/                   -> your repo   (opt-in, see below)
+.agent/skills/tool-provisioning/                -> your repo   (opt-in, see below)
 ```
 
 Then add to your project's `.gitignore`:
 
 ```gitignore
 .agent/work/
-# .agent/memory/     <- uncomment if each developer should build their own index
+.agent/memory/session/   # session-memory's local log -- raw prompt/turn text, keep it local
+# .agent/memory/          <- uncomment the codebase map too if each developer should build their own index
 ```
 
 ---
@@ -90,6 +102,57 @@ Then add to your project's `.gitignore`:
 | Possibly-unused symbols | `orphans` |
 
 All verbs accept `--limit N`, `--json`, and `--root <dir>`.
+
+---
+
+## Extension: session-memory (cross-session continuity, opt-in)
+
+`codebase-memory` knows the *code*. `session-memory` knows the
+*conversation* — an append-only local log of prompts and turns, searched by
+lexical (TF-IDF) similarity, so a session that starts after an earlier one
+ended can recall what that session established.
+
+```bash
+python .agent/skills/session-memory/memory.py recall "what we discussed about auth"
+python .agent/skills/session-memory/memory.py recent
+```
+
+Wire it into Claude Code's `SessionStart` / `UserPromptSubmit` / `Stop` hooks
+(`bash install.sh . --wire-hooks`, or by hand — see SETUP.md) and it runs
+without being invoked: every prompt is recorded and matched against every
+earlier session's entries in this repo, with related hits injected as
+context automatically. This is the "sits between the calls" behaviour — the
+agent gets relevant history without you or it having to remember it exists.
+
+It is lexical similarity, not a trained embedding model: a hit shares real
+vocabulary with your query, not necessarily a paraphrased concept. Recalled
+entries get a small, capped ranking boost the more often they prove
+relevant (`weight`, bumped on recall) — a frequency heuristic that nudges
+toward what keeps mattering, not reinforcement learning in the ML sense, and
+never enough to override actual topical similarity. Every write passes
+through a best-effort secret redaction pass first. Detail:
+[`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md).
+
+## Extension: tool-provisioning (propose-only, opt-in)
+
+Detects that a task needs a tool/library/MCP server, and — **only after you
+approve it in chat** — installs it, lets the agent use it, then uninstalls
+it again. Nothing is ever installed silently.
+
+```bash
+python .agent/skills/tool-provisioning/toolkit.py search "read a pdf"
+python .agent/skills/tool-provisioning/toolkit.py plan pdf-text     # prints commands, runs nothing
+python .agent/skills/tool-provisioning/toolkit.py install pdf-text  # only after you say yes
+python .agent/skills/tool-provisioning/toolkit.py uninstall pdf-text
+```
+
+Every install is logged to a local ledger; `uninstall` reads its recorded
+command back from that ledger and refuses to act on anything not listed
+there, so it can never remove a package that was already on your machine
+before the kit touched it. `list-installed` / `sweep` recover from a task
+that ended before cleanup ran. The registry is a small curated JSON file you
+extend per-project without touching the shipped copy. Detail:
+[`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md).
 
 ---
 
@@ -176,10 +239,16 @@ wouldn't earn its complexity. Output is sorted and deterministic, so committing
 
 ## Compatibility
 
-`AGENTS.md` is read by GitHub Copilot (recent VS Code), Claude Code, Codex,
-Cursor, Zed, and most agent harnesses. `.github/copilot-instructions.md` is a
-thin pointer at the same contract so Copilot picks it up either way — you
-maintain one file, not two.
+`AGENTS.md` and `codebase-memory` are read by GitHub Copilot (recent VS Code),
+Claude Code, Codex, Cursor, Zed, and most agent harnesses.
+`.github/copilot-instructions.md` is a thin pointer at the same contract so
+Copilot picks it up either way — you maintain one file, not two.
+
+`session-memory`'s automatic behaviour (the hooks) is Claude-Code-specific —
+that harness is what defines `SessionStart` / `UserPromptSubmit` / `Stop`
+hooks. Its `memory.py` CLI and `tool-provisioning`'s `toolkit.py` are plain
+Python and work anywhere; other harnesses just have to invoke them by hand or
+via their own hook/skill mechanism instead of getting it for free.
 
 If you already run RPI chat modes, they compose directly: `AGENTS.md` §5 defines
 the same three phases and names the artifacts they should write.
@@ -188,15 +257,22 @@ the same three phases and names the artifacts they should write.
 
 ## What this is not
 
-Not a language server, not an AST-accurate call graph, not semantic search. If
-you want compiler-grade accuracy across 158 languages with sub-millisecond
-queries and a proper knowledge graph, use
+`codebase-memory` is not a language server, not an AST-accurate call graph,
+not semantic search. If you want compiler-grade accuracy across 158 languages
+with sub-millisecond queries and a proper knowledge graph, use
 [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp), which is
 where several ideas here came from — the tiered agent profiles, the coverage-vs-
 completeness distinction, and the layered ignore model. This kit is the
 zero-dependency, no-MCP version of the same idea, for people who want a
 markdown-and-scripts approach they can read in one sitting and audit in ten
 minutes.
+
+`session-memory` is not semantic search either — its TF-IDF recall matches
+shared vocabulary, not paraphrased meaning, and it is not reinforcement
+learning in the ML sense; see the extension section above. `tool-provisioning`
+is not a package manager or a sandbox — it never installs anything without an
+explicit yes from a human in the current chat, and it never uninstalls
+anything it didn't itself install.
 
 ---
 

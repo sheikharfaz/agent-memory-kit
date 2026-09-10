@@ -39,3 +39,11 @@ Anything beyond a one-file edit runs Research → Plan → Implement, writing
 `research.md`, `plan.md`, `progress.md` under `.agent/work/<task-slug>/`, with a
 Hypothesis → Verify → Evidence gate at every phase boundary. Stop for approval
 after the plan. Details in `AGENTS.md` §5.
+
+## Optional extensions
+
+If present, `.agent/skills/session-memory/` (cross-session recall of past
+prompts/turns) and `.agent/skills/tool-provisioning/` (propose-only tool
+install/uninstall) are opt-in — see `AGENTS.md` §13–14 and their own
+`SKILL.md` files. Tool provisioning never installs anything without explicit
+approval in the current conversation.

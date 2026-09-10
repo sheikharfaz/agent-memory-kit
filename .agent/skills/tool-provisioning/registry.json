@@ -1,0 +1,83 @@
+[
+  {
+    "name": "pdf-text",
+    "kind": "pip",
+    "match": ["pdf", "extract pdf", "read pdf", "pdf text", "parse pdf"],
+    "check": {"type": "python_import", "module": "pypdf"},
+    "install_cmd": ["pip", "install", "--user", "pypdf"],
+    "uninstall_cmd": ["pip", "uninstall", "-y", "pypdf"],
+    "risk": "Installs the pure-Python 'pypdf' package from PyPI into the user site-packages."
+  },
+  {
+    "name": "xlsx",
+    "kind": "pip",
+    "match": ["xlsx", "excel", "spreadsheet", "openpyxl"],
+    "check": {"type": "python_import", "module": "openpyxl"},
+    "install_cmd": ["pip", "install", "--user", "openpyxl"],
+    "uninstall_cmd": ["pip", "uninstall", "-y", "openpyxl"],
+    "risk": "Installs 'openpyxl' from PyPI into the user site-packages."
+  },
+  {
+    "name": "yaml",
+    "kind": "pip",
+    "match": ["yaml", "yml", "pyyaml"],
+    "check": {"type": "python_import", "module": "yaml"},
+    "install_cmd": ["pip", "install", "--user", "pyyaml"],
+    "uninstall_cmd": ["pip", "uninstall", "-y", "pyyaml"],
+    "risk": "Installs 'pyyaml' from PyPI into the user site-packages."
+  },
+  {
+    "name": "images",
+    "kind": "pip",
+    "match": ["image", "png", "jpg", "resize image", "thumbnail", "pillow"],
+    "check": {"type": "python_import", "module": "PIL"},
+    "install_cmd": ["pip", "install", "--user", "Pillow"],
+    "uninstall_cmd": ["pip", "uninstall", "-y", "Pillow"],
+    "risk": "Installs 'Pillow' (image processing) from PyPI into the user site-packages."
+  },
+  {
+    "name": "html-parse",
+    "kind": "pip",
+    "match": ["html parse", "scrape html", "beautifulsoup", "bs4"],
+    "check": {"type": "python_import", "module": "bs4"},
+    "install_cmd": ["pip", "install", "--user", "beautifulsoup4"],
+    "uninstall_cmd": ["pip", "uninstall", "-y", "beautifulsoup4"],
+    "risk": "Installs 'beautifulsoup4' from PyPI into the user site-packages."
+  },
+  {
+    "name": "dataframes",
+    "kind": "pip",
+    "match": ["csv analysis", "dataframe", "pandas", "tabular data"],
+    "check": {"type": "python_import", "module": "pandas"},
+    "install_cmd": ["pip", "install", "--user", "pandas"],
+    "uninstall_cmd": ["pip", "uninstall", "-y", "pandas"],
+    "risk": "Installs 'pandas' and native dependencies (numpy) from PyPI -- a larger download than the other entries here."
+  },
+  {
+    "name": "browser-automation",
+    "kind": "pip",
+    "match": ["browser automation", "headless browser", "playwright", "scrape a page with js"],
+    "check": {"type": "python_import", "module": "playwright"},
+    "install_cmd": ["pip", "install", "--user", "playwright"],
+    "uninstall_cmd": ["pip", "uninstall", "-y", "playwright"],
+    "risk": "Installs only the 'playwright' Python package. Browser binaries (a further, much larger download via 'playwright install') are NOT installed automatically -- propose that as its own separate step if actually needed."
+  },
+  {
+    "name": "github-cli",
+    "kind": "manual",
+    "match": ["github cli", "gh cli", "open a pr from the terminal"],
+    "check": {"type": "subprocess", "cmd": ["gh", "--version"]},
+    "install_cmd": null,
+    "uninstall_cmd": null,
+    "risk": "No safe cross-platform install command exists for this one -- point the developer at https://cli.github.com and let them install it themselves."
+  },
+  {
+    "name": "mcp-memory-server",
+    "kind": "mcp",
+    "match": ["mcp memory server", "persistent mcp memory"],
+    "check": {"type": "mcp", "name": "memory"},
+    "install_cmd": ["claude", "mcp", "add", "memory", "--", "npx", "-y", "@modelcontextprotocol/server-memory"],
+    "uninstall_cmd": ["claude", "mcp", "remove", "memory"],
+    "risk": "Registers an MCP server with Claude Code that runs via 'npx' (downloads the package from the npm registry on first run). This is an example entry -- adjust the name and command for the actual MCP server needed."
+  }
+]
