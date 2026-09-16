@@ -4,7 +4,7 @@ Operating contract for any AI coding agent working in this repository.
 Applies to GitHub Copilot (agent mode), Claude Code, Codex, Cursor, and anything
 else that reads `AGENTS.md`.
 
-This file is loaded on every turn, so it stays under ~5k tokens even with five
+This file is loaded on every turn, so it stays under ~5k tokens even with six
 skills' worth of contract folded in. Detail lives in skills under
 `.agent/skills/`, loaded only when the trigger fires.
 
@@ -86,6 +86,7 @@ answers in ~0.1s. Use it instead of grep for anything structural.
 |---|---|
 | Orient in an unfamiliar repo | `arch` |
 | Where is X defined? | `def X` · `search '<regex>' --kind class` |
+| I don't know what it's called | `find <plain words>` — ranks symbols by words, not regex |
 | What breaks if I change X? | `callers X` · `impact <path>` |
 | What does this file depend on? | `file <path>` · `callees <path>` |
 | Who imports this module? | `importers <module>` |
@@ -107,6 +108,8 @@ assembled from strings. Therefore:
   this codebase", run `coverage` on the paths that would contain it, then grep
   those paths directly, then state which paths you covered.
 * `orphans` is a lead list, never a delete list.
+* `find` ranks by shared words, so a low score means "few terms in common",
+  not "nothing relevant exists". Use `def`/`search` once you know the name.
 
 ---
 
@@ -321,7 +324,7 @@ decision, the alternatives rejected, the consequences. Never rewrite an old ADR
 
 If `.agent/skills/session-memory/hooks/` are wired into `.claude/settings.json`
 (see SETUP.md), every prompt and turn in this repo is logged locally to
-`.agent/memory/session/entries.jsonl` and searched by lexical (TF-IDF)
+`.agent/memory/session/entries.jsonl` and searched by lexical (BM25)
 similarity — a session that starts after an earlier, separate one ended can
 recall what that session established, without either of you re-explaining
 it. Not wired in? Use it by hand:

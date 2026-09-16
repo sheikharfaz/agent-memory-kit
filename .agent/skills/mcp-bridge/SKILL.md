@@ -6,7 +6,7 @@ description: Exposes codebase-memory and session-memory as a live Model Context 
 # Skill: mcp-bridge
 
 A minimal, stdlib-only MCP server (`server.py`) that turns `codebase-memory`
-and `session-memory` into 20 callable tools over the standard MCP stdio
+and `session-memory` into 21 callable tools over the standard MCP stdio
 transport. Everything else in this kit reaches an agent through file
 conventions (`AGENTS.md`, `CODEBASE_MAP.md`) or Claude Code's own hook
 mechanism (`session-memory`'s `SessionStart`/`UserPromptSubmit`/`Stop`).
@@ -62,13 +62,17 @@ Desktop's `claude_desktop_config.json` and most other hosts use the same
 
 ## Tools
 
-16 `codebase_*` tools mirror `query.py`'s verbs one-for-one (`verify`,
-`build`, `arch`, `def`, `callers`, `callees`, `search`, `file`,
+17 `codebase_*` tools mirror `query.py`'s verbs one-for-one (`verify`,
+`build`, `arch`, `def`, `callers`, `callees`, `search`, `find`, `file`,
 `importers`, `routes`, `impact`, `changed`, `coverage`, `orphans`,
 `stats`, `drift`) plus 4 `session_*` tools mirror `memory.py`'s read
 verbs (`recall`, `recent`, `stats`) plus one write (`remember`, which
-appends a `note` entry). Each tool's `description` and `inputSchema` are
-generated straight from the same flags the CLI verb takes -- run
+appends a `note` entry). `codebase_find` is the one to reach for when the
+model does not already know what a symbol is called -- `codebase_search`
+needs a regex that already matches the real name.
+
+Each tool's `description` and `inputSchema` are generated straight from the
+same flags the CLI verb takes -- run
 `query.py <verb> --help` or read `query.py`'s docstring if a tool's
 purpose isn't clear from its MCP description alone.
 

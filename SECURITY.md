@@ -23,6 +23,7 @@ under their own OS-level permissions.
 | `dev-recap` (`recap_log.py`) | `git diff` output, its own logs, `codebase-memory`'s index if present | only `.agent/memory/learning/` | **none, ever** |
 | `spec-first` (`spec_first.py`) | its own PRD.md/TRD.md files, `git` (none directly — reads via the agent's own tool use) | only `.agent/work/<task-slug>/` (the same directory RPI already used) | **none, ever** |
 | `mcp-bridge` (`server.py`) | whatever `codebase-memory`/`session-memory` already read, via subprocess | only what those two already write (`.agent/memory/graph/`, `CODEBASE_MAP.md`, `.agent/memory/session/`) — nothing new | **none, ever** |
+| `.agent/lib/retrieval.py` | nothing — a pure function library (tokenizer + BM25) called in-process | nothing | **none, ever** |
 
 Nothing here phones home, collects telemetry, or uploads anything by itself.
 Every network-capable action is either a command a human explicitly
@@ -34,7 +35,7 @@ long-lived local process for as long as the MCP host that launched it keeps
 it open — same lifetime as any other MCP server, not a background daemon
 this kit starts on its own. Its input channel is its own stdin, written to
 only by the process that launched it (the MCP host); it never binds a
-network port or accepts a remote connection. It exposes 20 tools, all
+network port or accepts a remote connection. It exposes 21 tools, all
 thin passthroughs to `codebase-memory`/`session-memory` CLI verbs the rest
 of this kit already ships, with the same read/write surface listed above —
 see
@@ -131,6 +132,19 @@ allow/deny decision. See `.agent/skills/tool-provisioning/SKILL.md`.
 
 - Secret redaction is regex-based and best-effort. Do not rely on it as a
   substitute for not pasting real credentials into a prompt.
+- **`codebase-memory`'s secret filter was deliberately narrowed in v0.5.0,
+  and a reviewer should know exactly how.** It used to reject any symbol
+  whose *name* contained the words `token`, `secret`, `password` or
+  `api_key`. That was over-broad in the worst direction: it silently deleted
+  `check_password` and 348 other real identifiers from django/django's
+  index, concentrated entirely on authentication code, so the index would
+  report that security-critical functions did not exist. A symbol name is an
+  identifier, not a value. The filter now rejects credential *shapes*
+  (`AKIA…`, `ghp_…`, `sk-…`, `xox…-`, PEM headers) anywhere, and
+  credential-ish words only when *bound to a literal value*
+  (`api_key="sk-live-…"`). The residual risk this accepts is a real secret
+  that is also a valid, credential-shaped identifier name, which is not a
+  shape any of these languages permits.
 - `tool-provisioning`'s "already installed" checks (`pip show`, module
   import, `claude mcp list`) can have false negatives/positives depending on
   the local Python/Node environment; `plan` always shows its work rather

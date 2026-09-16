@@ -1,0 +1,35 @@
+dataset: session_recall  ·  40 entries  ·  20 queries  ·  scorer=bm25
+
+query  bucket       text                                             rank   top
+--------------------------------------------------------------------------------
+q01    literal      how many times do we retry a payment                4  0.44
+q02    literal      audit event retention period                        1  0.63
+q03    literal      windows CI encoding failure                         1  0.41
+q04    literal      constant time comparison                            1  0.38
+q05    literal      staging database wiped nightly                      1  0.32
+q06    literal      manual approval gate before production              1  0.36
+q07    identifier   where do we look up a user by id                    1  0.39
+q08    identifier   stripe webhook signature verification               1  0.42
+q09    identifier   product catalog caching                             2  0.62
+q10    identifier   order state transitions                             1  0.42
+q11    identifier   csv upload size limit                               1  0.42
+q12    identifier   validate the session cookie                         1  0.43
+q13    identifier   refresh token rotation                              1  0.57
+q14    identifier   charge customer deadline                            1  0.42
+q15    identifier   notification dispatcher in tests                    1  0.47
+q16    identifier   load config local override                          1  0.43
+q17    paraphrase   what stops a customer being billed twice            1  0.43
+q18    paraphrase   which parts of the system talk to the outside    MISS  0.00
+q19    paraphrase   is there anything here we could safely delete    MISS  0.16
+q20    paraphrase   what did we make faster recently                 MISS  0.00
+
+overall: recall@1 0.675 · recall@3 0.775 · recall@5 0.825 · MRR 0.787 · 3 miss(es)
+
+bucket       queries recall@1 recall@3     MRR  misses
+identifier        10    0.850    1.000   0.950       0
+literal            6    0.667    0.750   0.875       0
+paraphrase         4    0.250    0.250   0.250       3
+
+A MISS in the `paraphrase` bucket is expected, not a bug: this is lexical retrieval,
+and a query that shares no vocabulary with its answer is outside what it can do.
+See evals/README.md.

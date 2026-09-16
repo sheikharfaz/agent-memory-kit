@@ -1,14 +1,14 @@
 ---
 name: session-memory
-description: Cross-session working memory for this repo -- a local, lexical (TF-IDF) log of prompts and turns that lets a new Claude Code session recall what an earlier, separate session established, without either of you re-explaining it. Trigger when asked what was discussed or decided previously, when picking a task back up after a break, when the developer says "like we talked about" or "continue from last time", or when deciding whether to install the hooks. Do NOT trigger for structural questions about the codebase itself -- that is the codebase-memory skill.
+description: Cross-session working memory for this repo -- a local, lexical (BM25) log of prompts and turns that lets a new Claude Code session recall what an earlier, separate session established, without either of you re-explaining it. Trigger when asked what was discussed or decided previously, when picking a task back up after a break, when the developer says "like we talked about" or "continue from last time", or when deciding whether to install the hooks. Do NOT trigger for structural questions about the codebase itself -- that is the codebase-memory skill.
 ---
 
 # Skill: session-memory
 
 An append-only, local record of prompts and assistant turns in this repo,
-recalled by TF-IDF lexical similarity. Entirely local: standard-library
-Python, no network, no daemon beyond Claude Code's own hook mechanism, no
-external index server. Reads and writes only `.agent/memory/session/`.
+recalled by BM25 lexical similarity over a code-aware tokenizer. Entirely
+local: standard-library Python, no network, no daemon beyond Claude Code's
+own hook mechanism, no external index server. Reads and writes only `.agent/memory/session/`.
 
 This is not the codebase index. `codebase-memory` (`.agent/skills/codebase-memory/`)
 knows the *code*. This skill knows the *conversation history* -- what was
@@ -73,15 +73,26 @@ python .agent/skills/session-memory/memory.py verify
 
 ## What kind of "semantic" this is -- read before trusting a result
 
-Ranking is TF-IDF cosine similarity over tokenized text: it finds entries
-that **share vocabulary** with your query. It is not a trained embedding
-model and does not understand paraphrase, synonyms, or concepts it has no
-shared words for. Consequences:
+Ranking is Okapi BM25 over a code-aware tokenizer: it finds entries that
+**share vocabulary** with your query. It is not a trained embedding model
+and does not understand paraphrase, synonyms, or concepts it has no shared
+words for. Consequences:
 
 * A high-scoring hit shares real terms with your prompt. Treat it as a lead.
 * A miss does not mean nothing relevant exists -- it may be worded
   differently. `recent` (chronological, no matching required) is the
   fallback when `recall` comes up empty.
+* **Identifiers are split, so plain words reach them.** `getUserById` indexes
+  as `getuserbyid` *and* `get`/`user`/`by`/`id`, which is why "where do we
+  look up a user by id" can now recall it. Before v0.5.0 it could not: the
+  tokenizer lowercased before splitting, and that one line made every
+  camelCase symbol unreachable by plain-words recall. `evals/` in the kit
+  repo measures the difference (recall@3 0.625 -> 0.775, and the
+  `identifier` bucket went from 3 misses to 0) and publishes the queries it
+  still fails.
+* **Requires `.agent/lib/retrieval.py`.** Without that one shared file this
+  skill silently falls back to the pre-v0.5.0 path -- still working, just
+  blind to camelCase again.
 * Recalled entries get a small ranking boost the more often they are
   recalled (`weight` field, bumped in `recall`/hooks). This rewards entries
   that keep proving useful, but it is a frequency heuristic, not

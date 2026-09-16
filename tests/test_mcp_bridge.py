@@ -137,7 +137,8 @@ class TestToolsList(MCPBridgeTestCase):
         names = {t["name"] for t in resp["result"]["tools"]}
         expected = {
             "codebase_verify", "codebase_build", "codebase_arch", "codebase_def",
-            "codebase_callers", "codebase_callees", "codebase_search", "codebase_file",
+            "codebase_callers", "codebase_callees", "codebase_search", "codebase_find",
+            "codebase_file",
             "codebase_importers", "codebase_routes", "codebase_impact", "codebase_changed",
             "codebase_coverage", "codebase_orphans", "codebase_stats", "codebase_drift",
             "session_recall", "session_recent", "session_stats", "session_remember",
@@ -183,6 +184,16 @@ class TestCodebaseTools(MCPBridgeTestCase):
         self.client.call_tool("codebase_build")
         resp = self.client.call_tool("codebase_callers", {"name": "helper"})
         self.assertIn("app/main.py", resp["result"]["content"][0]["text"])
+
+    def test_find_reaches_a_camel_case_symbol_from_plain_words(self):
+        self.client.call_tool("codebase_build")
+        resp = self.client.call_tool("codebase_find", {"query": "helper"})
+        self.assertFalse(resp["result"]["isError"])
+        self.assertIn("helper", resp["result"]["content"][0]["text"])
+
+    def test_find_without_query_is_tool_error(self):
+        resp = self.client.call_tool("codebase_find", {})
+        self.assertTrue(resp["result"]["isError"])
 
     def test_def_without_required_name_is_tool_error_not_protocol_error(self):
         resp = self.client.call_tool("codebase_def", {})

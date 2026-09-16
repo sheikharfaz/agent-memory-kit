@@ -18,6 +18,7 @@ what exists. Do not use it to read a file you already have open.
 |---|---|
 | First turn in this repo | `verify`, then `build` if needed, then read the map |
 | "Where is X?" | `def X` or `search '<regex>'` |
+| "I don't know what it's called" | `find <plain words>` |
 | "What breaks if I change X?" | `callers X`, then `impact <path>` |
 | "How does this module fit?" | Read `modules/<slug>.md` |
 | "What endpoints exist?" | `routes` |
@@ -40,6 +41,7 @@ python .agent/skills/codebase-memory/query.py def <Name> [--fuzzy]
 python .agent/skills/codebase-memory/query.py callers <Name>
 python .agent/skills/codebase-memory/query.py callees <path>
 python .agent/skills/codebase-memory/query.py search '<regex>' [--kind class|function|method|type|interface] [--module <prefix>]
+python .agent/skills/codebase-memory/query.py find <plain words> [--kind ...]
 python .agent/skills/codebase-memory/query.py file <path>
 python .agent/skills/codebase-memory/query.py importers <module-or-name>
 python .agent/skills/codebase-memory/query.py routes [prefix]
@@ -139,6 +141,12 @@ compiler front end or a language server. Consequences you must respect:
   caller.
 * **`orphans` is a lead list.** Exported APIs, entry points, framework hooks and
   cross-language callers all look identical to dead code here.
+* **`find` ranks, it does not decide.** It scores symbols by words shared with
+  your query — identifiers are split, so `user auth token` reaches
+  `refreshUserAuthToken` — which makes it the right verb when you do not know
+  the name. It is lexical: a symbol whose name shares no words with how you
+  phrased the question will not surface, however related it is conceptually.
+  Once you know the name, `def`/`callers` are exact and `find` is not.
 
 Before any negative claim ("there is no X", "nothing calls Y", "this is unused"):
 run `coverage` on the paths that would contain it, grep those paths directly,
@@ -161,7 +169,8 @@ automatically.
 | `STALE: schema N` | Indexer was upgraded — rebuild |
 | Files missing from the map | They are gitignored, in `.agentignore`, binary, generated, or over `--max-bytes`. Check with `coverage <path>` |
 | Symbol count looks low for a language | That language has coarse patterns; the file is still indexed as a file node. Grep it directly and note that in your answer |
-| `def` finds nothing | Try `--fuzzy`, then `search '<partial>'`, then grep the module's paths |
+| `def` finds nothing | Try `--fuzzy`, then `find <plain words>`, then `search '<partial>'`, then grep the module's paths |
+| `find` says it needs `.agent/lib/retrieval.py` | That one shared file was not copied; every other verb works without it |
 | Build is slow on a monorepo | `--calls off` for structure, or `--root <subpackage>` |
 | Everything looks unparsed | The repo is not a git checkout and the walk hit the deny-list; check `discovery` in `stats` |
 

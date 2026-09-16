@@ -45,7 +45,7 @@ sys.path.insert(0, os.path.join(SKILLS_DIR, "session-memory"))
 import memory as mem  # noqa: E402 -- reuse find_repo_root, one definition
 
 SERVER_NAME = "agent-memory-kit"
-SERVER_VERSION = "0.4.0"
+SERVER_VERSION = "0.5.0"
 PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
 DEFAULT_TIMEOUT = 45
 BUILD_TIMEOUT = 300
@@ -156,6 +156,15 @@ def h_codebase_search(a, root):
         extra += ["--module", a["module"]]
     extra += _limit(a)
     return _run(_query_argv("search", extra, root), root)
+
+
+def h_codebase_find(a, root):
+    words = _require(a, "query")
+    extra = [str(words)]
+    if a.get("kind"):
+        extra += ["--kind", a["kind"]]
+    extra += _limit(a)
+    return _run(_query_argv("find", extra, root), root)
 
 
 def h_codebase_file(a, root):
@@ -299,6 +308,19 @@ TOOLS = [
                     "Module path prefix filter"},
          "root": ROOT_PROP, "limit": LIMIT_PROP}, required=["pattern"]),
      "handler": h_codebase_search},
+    {"name": "codebase_find",
+     "description": "Find symbols by plain words rather than an exact name "
+                     "or regex -- 'user auth token refresh' reaches "
+                     "refreshUserAuthToken. Use this when you do not already "
+                     "know what the symbol is called; use codebase_search "
+                     "when you do and want a regex.",
+     "inputSchema": _schema({
+         "query": {"type": "string", "description":
+                   "Plain words describing what you are looking for"},
+         "kind": {"type": "string", "description":
+                  "Symbol kind filter, e.g. function, class"},
+         "root": ROOT_PROP, "limit": LIMIT_PROP}, required=["query"]),
+     "handler": h_codebase_find},
     {"name": "codebase_file",
      "description": "Summarize one indexed file: language, module, LOC, "
                      "its symbols, imports, and exposed routes.",

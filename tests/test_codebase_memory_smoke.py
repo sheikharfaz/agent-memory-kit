@@ -14,8 +14,12 @@ import tempfile
 import unittest
 
 KIT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-INDEX_PY = os.path.join(KIT_ROOT, ".agent", "skills", "codebase-memory", "index.py")
-QUERY_PY = os.path.join(KIT_ROOT, ".agent", "skills", "codebase-memory", "query.py")
+SKILL_DIR = os.path.join(KIT_ROOT, ".agent", "skills", "codebase-memory")
+INDEX_PY = os.path.join(SKILL_DIR, "index.py")
+QUERY_PY = os.path.join(SKILL_DIR, "query.py")
+
+sys.path.insert(0, SKILL_DIR)
+import index  # noqa: E402 -- extraction rules are unit-tested, not only shelled out to
 
 
 def run(cmd, cwd=KIT_ROOT, timeout=60):
@@ -143,6 +147,116 @@ class TestAgentDirIndexing(unittest.TestCase):
 
         self.assertFalse(any(p.startswith(".agent/memory/") for p in paths),
                           ".agent/memory/ must stay excluded even if .agentignore tries to negate it")
+
+
+class TestSecretFilterScope(unittest.TestCase):
+    """The secret scrubber must catch credential *values* without deleting
+    symbols that merely *name* a credential concept. Naming this wrong cost
+    django/django 349 distinct symbols -- `check_password` among them --
+    silently, in the part of a codebase where a false "it does not exist" is
+    most dangerous."""
+
+    def extract(self, src, lang="python", rel="a.py"):
+        return [s[0] for s in index.extract(rel, src, lang)[0]]
+
+    def test_auth_named_symbols_are_indexed(self):
+        for src, name in (
+            ("def check_password(raw):\n    pass\n", "check_password"),
+            ("def refreshUserAuthToken(s):\n    pass\n", "refreshUserAuthToken"),
+            ("class TokenStore:\n    pass\n", "TokenStore"),
+            ("class SecretManager:\n    pass\n", "SecretManager"),
+            ("def get_api_key(self):\n    pass\n", "get_api_key"),
+            ("def set_password(self, raw_password):\n    pass\n", "set_password"),
+        ):
+            self.assertIn(name, self.extract(src), name)
+
+    def test_a_credential_shaped_name_is_still_rejected(self):
+        # not a plausible identifier in any language; if one ever appears as
+        # a symbol name it is far likelier to be a leaked value
+        self.assertEqual(self.extract("class AKIAIOSFODNN7EXAMPLE:\n    pass\n"), [])
+
+    def test_signature_with_a_bound_secret_is_scrubbed_to_the_name(self):
+        src = "const conn = (api_key='sk-live-abcdefghijklmnop') => 1\n"
+        syms = index.extract("a.js", src, "javascript")[0]
+        self.assertTrue(syms)
+        name, _kind, _line, sig = syms[0]
+        self.assertEqual(sig, name, "a bound secret value must not reach the index")
+
+    def test_route_path_naming_a_credential_is_kept(self):
+        _syms, _imps, routes = index.extract(
+            "r.py", '@app.get("/api/v1/token/refresh")\ndef r():\n    pass\n', "python")
+        self.assertTrue(any("/api/v1/token/refresh" in p for _v, p in routes))
+
+    def test_looks_like_secret_value_requires_a_binding_or_a_shape(self):
+        self.assertFalse(index.looks_like_secret_value("def set_password(self, raw)"))
+        self.assertTrue(index.looks_like_secret_value("password: 'hunter2xyzzy'"))
+        self.assertTrue(index.looks_like_secret_value("-----BEGIN RSA PRIVATE KEY-----"))
+
+
+class TestFindVerb(unittest.TestCase):
+    """`find` ranks symbols by plain words -- the thing `search` cannot do,
+    because it needs a regex that already matches the real name."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.repo = self._tmp.name
+        run(["git", "init", "-q", "."], cwd=self.repo)
+        self.write("auth/tokens.py",
+                   "def refreshUserAuthToken(session):\n    return session\n")
+        self.write("billing/charge.py",
+                   "def chargeCustomer(order, deadline):\n    return order\n")
+        self.write("infra/deploy.py",
+                   "def runDeployPipeline():\n    return True\n")
+        run(["git", "add", "-A"], cwd=self.repo)
+        run(["git", "-c", "user.email=t@example.com", "-c", "user.name=T",
+             "commit", "-q", "-m", "init"], cwd=self.repo)
+        r = run([sys.executable, INDEX_PY, "build"], cwd=self.repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write(self, rel, content):
+        full = os.path.join(self.repo, rel)
+        os.makedirs(os.path.dirname(full), exist_ok=True)
+        with open(full, "w", encoding="utf-8") as fh:
+            fh.write(content)
+
+    def find(self, *words):
+        return run([sys.executable, QUERY_PY, "--root", self.repo, "find"] + list(words),
+                   cwd=self.repo)
+
+    def test_plain_words_reach_a_camel_case_symbol(self):
+        r = self.find("user", "auth", "token", "refresh")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("refreshUserAuthToken", r.stdout.splitlines()[0])
+
+    def test_ranks_the_right_symbol_above_the_others(self):
+        r = self.find("deploy", "pipeline")
+        self.assertIn("runDeployPipeline", r.stdout.splitlines()[0])
+
+    def test_path_words_are_searchable_too(self):
+        # ranking covers the module path, not just the symbol name, so
+        # "billing" reaches a symbol defined under billing/
+        r = self.find("billing", "charge")
+        self.assertIn("chargeCustomer", r.stdout.splitlines()[0])
+
+    def test_kind_filter(self):
+        r = self.find("user", "auth", "--kind", "class")
+        self.assertEqual(r.returncode, 0)
+        self.assertNotIn("refreshUserAuthToken", r.stdout)
+
+    def test_json_output_is_clean(self):
+        r = run([sys.executable, QUERY_PY, "--root", self.repo, "find",
+                 "user", "auth", "--json"], cwd=self.repo)
+        rows = json.loads(r.stdout)
+        self.assertTrue(rows)
+        self.assertIn("score", rows[0])
+
+    def test_no_match_is_not_an_error(self):
+        r = self.find("kubernetes", "helm", "chart")
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("no rows", r.stdout)
 
 
 class TestMapCompactness(unittest.TestCase):

@@ -38,6 +38,7 @@ FILES=(
   "SETUP.md"
   "SECURITY.md"
   ".github/copilot-instructions.md"
+  ".agent/lib/retrieval.py"
   ".agent/skills/codebase-memory/SKILL.md"
   ".agent/skills/codebase-memory/index.py"
   ".agent/skills/codebase-memory/query.py"

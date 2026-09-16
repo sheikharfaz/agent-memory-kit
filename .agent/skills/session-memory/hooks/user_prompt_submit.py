@@ -52,7 +52,7 @@ def run():
 
     lines = [
         "Related context from earlier sessions in this repo, found by local "
-        "lexical recall (TF-IDF over past prompts/turns, not semantic "
+        "lexical recall (BM25 over past prompts/turns, not semantic "
         "understanding) -- treat as a lead, verify before relying on it:",
     ]
     for e, score in hits:

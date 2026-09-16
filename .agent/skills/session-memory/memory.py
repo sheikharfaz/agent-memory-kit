@@ -2,7 +2,7 @@
 """
 session-memory :: memory.py
 An append-only, local log of prompts and turns in this repo, recalled by
-lexical (TF-IDF) similarity so a session that starts cold can pick up context
+lexical (BM25) similarity so a session that starts cold can pick up context
 a previous, separate session already established.
 
   python .agent/skills/session-memory/memory.py record --kind prompt --text "..."
@@ -15,9 +15,12 @@ Guarantees:
   * Python 3.8+ standard library only. No network. No daemon. No installs.
   * Writes ONLY inside .agent/memory/session/.
   * Every write passes through redact() first -- best-effort, not a guarantee.
-  * Ranking is TF-IDF cosine similarity, a lexical/keyword method, not a
-    trained embedding model. It finds entries that share vocabulary with the
-    query, not entries that are conceptually similar but worded differently.
+  * Ranking is Okapi BM25 over a code-aware tokenizer (identifiers are
+    split, so `getUserById` is reachable by the words "user" and "id"): a
+    lexical/keyword method, not a trained embedding model. It finds entries
+    that share vocabulary with the query, not entries that are conceptually
+    similar but worded differently. `evals/` in the kit repo measures both
+    the gain and the remaining blind spot.
 
 Hooks (.agent/skills/session-memory/hooks/) import this module directly
 instead of shelling out, so all normal Claude Code hook JSON handling and
@@ -71,6 +74,32 @@ SECRET_PATTERNS = [re.compile(p) for p in [
     r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}",
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----",
 ]]
+
+# .../.agent/skills/session-memory/memory.py -> .../.agent/lib/
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(_HERE)), "lib")
+_UNSET = object()
+_shared = _UNSET
+
+
+def shared_retrieval():
+    """`.agent/lib/retrieval.py` if it is installed alongside this skill,
+    else None. Guarded on purpose: a developer who copied only this skill's
+    files still gets working recall, just the older lexical path -- the same
+    fail-open posture every hook in this skill already takes. Resolved once
+    and cached; the answer cannot change mid-process."""
+    global _shared
+    if _shared is _UNSET:
+        _shared = None
+        if os.path.isfile(os.path.join(_LIB_DIR, "retrieval.py")):
+            try:
+                if _LIB_DIR not in sys.path:
+                    sys.path.insert(0, _LIB_DIR)
+                import retrieval
+                _shared = retrieval
+            except Exception:
+                _shared = None
+    return _shared
 
 
 # --------------------------------------------------------------------- io ---
@@ -219,9 +248,44 @@ def bump_weight(root, ids, amount=1):
 
 # --------------------------------------------------------------- ranking ---
 
-def tokenize(text):
+def tokenize_plain(text):
+    """The v0.4.0 tokenizer, kept verbatim. It lowercases before splitting,
+    so `getUserById` collapses to one opaque term and a later plain-words
+    question about it recalls nothing. That defect is why the code-aware
+    tokenizer exists -- this stays as the fallback when `.agent/lib/` was
+    not installed, and as the baseline arm `evals/recall_eval.py --scorer
+    tfidf` measures against, so the improvement is reproducible rather than
+    asserted."""
     return [t for t in re.findall(r"[a-z0-9]{2,}", (text or "").lower())
             if t not in STOPWORDS]
+
+
+def tokenize(text):
+    """The active tokenizer: code-aware when `.agent/lib/retrieval.py` is
+    installed, the v0.4.0 behaviour otherwise."""
+    shared = shared_retrieval()
+    if shared is not None:
+        return shared.tokenize(text, STOPWORDS)
+    return tokenize_plain(text)
+
+
+def resolve_scorer(scorer=None):
+    """Which retrieval method to use. Each name selects a *pair* -- tokenizer
+    and ranker together -- because measuring one without the other would not
+    describe any version this kit has ever shipped:
+
+      "bm25"  code-aware tokenizer + Okapi BM25   (current default)
+      "tfidf" v0.4.0 tokenizer + TF-IDF cosine    (fallback, and the baseline)
+
+    None means "whatever this installation would use by default"."""
+    if scorer == "tfidf":
+        return "tfidf"
+    if scorer == "bm25":
+        if shared_retrieval() is None:
+            raise ValueError(
+                "bm25 needs .agent/lib/retrieval.py, which is not installed here")
+        return "bm25"
+    return "bm25" if shared_retrieval() is not None else "tfidf"
 
 
 def _tf_weight(tf):
@@ -253,8 +317,32 @@ def _cosine(a, b):
     return sum(v * b.get(k, 0.0) for k, v in a.items())
 
 
+def _similarities(entries, query_text, method):
+    """One similarity per entry, same order, in [0, 1]. Both arms return the
+    same shape and the same scale, so everything downstream -- the weight
+    boost, `min_score`, the hooks' injection thresholds -- is unchanged by
+    which one ran."""
+    if method == "bm25":
+        shared = shared_retrieval()
+
+        def tok(text):
+            return shared.tokenize(text, STOPWORDS)
+
+        qtokens = tok(query_text)
+        if not qtokens:
+            return None
+        return shared.BM25([tok(e.get("text", "")) for e in entries]).score(qtokens)
+
+    doc_tokens = [tokenize_plain(e.get("text", "")) for e in entries]
+    idf = _build_idf(doc_tokens, len(entries))
+    qvec = _vector(tokenize_plain(query_text), idf)
+    if not qvec:
+        return None
+    return [_cosine(qvec, _vector(toks, idf)) for toks in doc_tokens]
+
+
 def recall(root, query_text, limit=DEFAULT_RECALL_LIMIT, exclude_session=None,
-           kinds=None, min_score=MIN_SCORE):
+           kinds=None, min_score=MIN_SCORE, scorer=None):
     if disabled():
         return []
     entries = list(load_entries(root))
@@ -265,16 +353,12 @@ def recall(root, query_text, limit=DEFAULT_RECALL_LIMIT, exclude_session=None,
     if not entries:
         return []
 
-    doc_tokens = [tokenize(e.get("text", "")) for e in entries]
-    idf = _build_idf(doc_tokens, len(entries))
-    doc_vecs = [_vector(toks, idf) for toks in doc_tokens]
-    qvec = _vector(tokenize(query_text), idf)
-    if not qvec:
+    sims = _similarities(entries, query_text, resolve_scorer(scorer))
+    if sims is None:
         return []
 
     scored = []
-    for e, dvec in zip(entries, doc_vecs):
-        sim = _cosine(qvec, dvec)
+    for e, sim in zip(entries, sims):
         if sim <= 0:
             continue
         # Mild reinforcement: entries that have proven relevant before (their

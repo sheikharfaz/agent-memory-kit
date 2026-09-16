@@ -7,6 +7,70 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-09-16
+
+### Added
+- `evals/`: a reproducible retrieval-*quality* harness, answering the
+  question `benchmarks/` deliberately does not -- when `session-memory`
+  recalls something, is it the right thing? Reports recall@1/@3/@5 and MRR
+  over a shipped 40-entry / 20-query developer-session dataset, runs both
+  the old and new ranking arms from one flag (`--scorer tfidf|bm25`), and
+  prints the queries it still fails rather than omitting them. Zero
+  dependencies, no network, no LLM call, ~1s. CI runs it on every push and
+  fails if quality regresses below the published numbers, so the README
+  cannot quietly go stale. Methodology, the authoring-bias disclosure, and
+  why these numbers are *not* comparable to LongMemEval/LOCOMO:
+  `evals/README.md`.
+- `.agent/lib/retrieval.py`: one shared, stdlib-only code-aware tokenizer
+  and Okapi BM25 scorer, consumed by `session-memory` and `codebase-memory`
+  through a guarded import -- an install missing this one file degrades to
+  the previous behaviour instead of failing.
+- `query.py find "<plain words>"` (and the `codebase_find` MCP tool, taking
+  `mcp-bridge` from 20 tools to 21): ranked symbol search for when you can
+  describe what you want but cannot name it -- `find verify a users
+  password` reaches `verify_password` in django/django in about half a
+  second, with no embedding model, vector store, or language server.
+
+### Changed
+- `session-memory` ranks with BM25 over a code-aware tokenizer instead of
+  TF-IDF cosine over a plain one. Measured on the new dataset: recall@1
+  0.450 -> 0.675, recall@3 0.625 -> 0.775, MRR 0.588 -> 0.787, misses 6 ->
+  3; per query, 5 better, 15 unchanged, **0 worse**. The gain is
+  concentrated where the old tokenizer was structurally blind (below).
+  Score scale is unchanged -- BM25 is normalised by each query's achievable
+  maximum -- so `MIN_SCORE` and the hooks' injection thresholds keep the
+  meaning they were calibrated for.
+
+### Fixed
+- **`session-memory` could not recall anything about a camelCase symbol.**
+  The tokenizer lowercased *before* splitting, so `getUserById` became one
+  opaque term: asking "where do we look up a user by id" a week later
+  shared zero vocabulary with the entry that recorded it, scored 0.0, and
+  returned nothing. Since camelCase covers most of JS, TS, Java, Go, C# and
+  Swift, that one line capped recall for the majority of real repositories
+  -- in a memory system whose subject matter is code. Identifiers are now
+  split into parts while the whole term is kept, so exact-name queries stay
+  precise. On the `identifier` bucket of the eval, recall@3 went 0.700 ->
+  **1.000** and misses 3 -> 0.
+- **`codebase-memory` silently deleted security-critical symbols from the
+  index.** The secret scrubber matched the bare *words* `token`, `secret`,
+  `password`, `api_key`, `bearer`, `access_key`, `private_key` -- and that
+  pattern was applied to symbol *names*. Any symbol whose name merely
+  mentioned the concept was dropped: measured against django/django, 349
+  distinct symbols and 395 definitions were missing, including
+  `check_password`, `set_password` and `verify_password`. The index would
+  report that Django's password-checking functions did not exist, in
+  exactly the part of a codebase where a false negative is most dangerous,
+  and nothing surfaced the loss because a missing symbol looks identical to
+  a symbol that was never there. The filter now rejects credential
+  *shapes* (`AKIA…`, `ghp_…`, `sk-…`, `xox…-`, PEM headers) anywhere, and
+  credential-ish words only when bound to a literal value
+  (`api_key="sk-live-…"`); a name is an identifier, not a value. Benchmark
+  numbers were re-run against the corrected index (django: 43,170 ->
+  43,621 symbols) and `SECURITY.md` documents the narrowed scope and the
+  residual risk it accepts.
+- `VERSION` had drifted again (`0.2.0` while `v0.4.0` was tagged).
+
 ## [0.4.0] — 2026-09-16
 
 ### Added

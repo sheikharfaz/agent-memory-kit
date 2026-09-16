@@ -21,8 +21,15 @@ provider's pricing bills against — not model behaviour or answer quality.
 
 | Repo | Files (parsed) | Symbols | Index build | `CODEBASE_MAP.md` | Naive tokens (4 questions) | Kit-assisted tokens | Ratio |
 |---|---|---|---|---|---|---|---|
-| [psf/requests](https://github.com/psf/requests) | 118 (37) | 797 | 0.17s | 1,034 | 85,220 | 1,566 | **54.4x** |
-| [django/django](https://github.com/django/django) | 6,904 (2,979) | 43,170 | 3.76s | 2,893 | 167,437 | 4,506 | **37.2x** |
+| [psf/requests](https://github.com/psf/requests) | 114 (37) | 797 | 0.13s | 1,032 | 85,220 | 1,564 | **54.5x** |
+| [django/django](https://github.com/django/django) | 6,901 (2,979) | 43,621 | 3.59s | 2,892 | 167,437 | 4,505 | **37.2x** |
+
+Django's symbol count went up by 451 in v0.5.0 — not because the extractor
+got smarter, but because a bug was removed: the secret scrubber used to
+match the bare *words* `token`, `secret`, `password`, `api_key`, and it was
+applied to symbol *names*, so `check_password` and 348 other identifiers
+were silently absent from the index. See the CHANGELOG entry; `evals/`
+exists so that class of silent hole gets caught by measurement next time.
 
 Raw output: [`results/requests.json`](results/requests.json) ·
 [`results/django.json`](results/django.json) ·

@@ -9,6 +9,7 @@ Replaces dozens of grep/read cycles with one cheap, structured answer.
   python .agent/skills/codebase-memory/query.py callers ProcessOrder
   python .agent/skills/codebase-memory/query.py callees src/orders/service.py
   python .agent/skills/codebase-memory/query.py search '.*Handler$' --kind class
+  python .agent/skills/codebase-memory/query.py find  user auth token refresh
   python .agent/skills/codebase-memory/query.py file  src/orders/service.py
   python .agent/skills/codebase-memory/query.py importers svc.orders.core
   python .agent/skills/codebase-memory/query.py routes /orders
@@ -175,6 +176,57 @@ def cmd_search(g, args):
     emit(args, rows, lambda s: "%s:%d  %-9s %s" % (s["p"], s["l"], s["k"], s["n"]))
     if not args.json:
         print("%d match(es)." % len(rows))
+
+
+# .../.agent/skills/codebase-memory/query.py -> .../.agent/lib/
+LIB_DIR = os.path.join(os.path.dirname(os.path.dirname(HERE)), "lib")
+
+
+def _retrieval():
+    """`.agent/lib/retrieval.py`, or None if this install does not have it.
+    Only `find` needs it; every other verb works without it."""
+    if not os.path.isfile(os.path.join(LIB_DIR, "retrieval.py")):
+        return None
+    try:
+        if LIB_DIR not in sys.path:
+            sys.path.insert(0, LIB_DIR)
+        import retrieval
+        return retrieval
+    except Exception:
+        return None
+
+
+def cmd_find(g, args):
+    """Find symbols by plain words instead of an exact name or regex --
+    'user auth token refresh' reaches refreshUserAuthToken. Ranks over each
+    symbol's split identifier, its module path, and its kind. How much of a
+    signature is captured varies by language, so do not count on parameter
+    names being searchable."""
+    r = _retrieval()
+    if r is None:
+        print("`find` needs .agent/lib/retrieval.py, which this install does not "
+              "have.\nCopy it from the kit (it is stdlib-only), or use "
+              "`search '<regex>'` if you already know the name.")
+        return
+    syms = list(g.symbols())
+    if not syms:
+        print("(no symbols in the index -- run index.py build)")
+        return
+    if args.kind:
+        syms = [s for s in syms if s["k"] == args.kind]
+    docs = [r.tokenize("%s %s %s %s" % (s["n"], s["p"], s["k"], s.get("sig", "")))
+            for s in syms]
+    scores = r.BM25(docs).score(r.tokenize(" ".join(args.words)))
+    # Ties broken by path/line so output is deterministic across runs.
+    ranked = sorted(((sc, s) for sc, s in zip(scores, syms) if sc > 0),
+                    key=lambda t: (-t[0], t[1]["p"], t[1]["l"]))
+    rows = [dict(s, score=round(sc, 4)) for sc, s in ranked]
+    emit(args, rows, lambda x: "%.2f  %s:%d  %-9s %s"
+         % (x["score"], x["p"], x["l"], x["k"], x["n"]))
+    if not args.json:
+        print("%d symbol(s) matched some part of the query. Ranking is lexical "
+              "over identifier parts -- a low score means few shared terms, not "
+              "that nothing relevant exists." % len(rows))
 
 
 KIND_ABBR = {"function": "fn", "method": "mth", "class": "cls",
@@ -435,6 +487,8 @@ def main():
     p = add("search", cmd_search, ("pattern", {}))
     p.add_argument("--kind")
     p.add_argument("--module")
+    p = add("find", cmd_find, ("words", {"nargs": "+"}))
+    p.add_argument("--kind")
     add("file", cmd_file, ("path", {}))
     add("importers", cmd_importers, ("target", {}))
     p = add("routes", cmd_routes)

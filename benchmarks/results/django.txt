@@ -1,4 +1,5 @@
 == django/django (chars/4 heuristic (tiktoken not installed)) ==
+index build: 3.59s, CODEBASE_MAP.md = 2892 tokens
 
 kind       question                                      naive tokens   kit tokens
 def        Where is the QuerySet class defined?                 30423           16
@@ -7,5 +8,5 @@ file       What does db/models/query.py contain and depe        30408          3
 impact     What breaks if db/models/base.py changes?            54063          979
 
 TOTAL (naive):                167437 tokens
-TOTAL (kit, map read once):   4506 tokens (2893 map + 1613 queries)
+TOTAL (kit, map read once):   4505 tokens (2892 map + 1613 queries)
 ratio: naive used 37.2x more tokens than the kit-assisted session

@@ -116,7 +116,7 @@ def record_recap(root, session_id, task, files, summary, cwd=None):
 
 def _mirror_to_session_memory(root, session_id, cwd, task, summary):
     """Best-effort: if session-memory is also installed in this repo, drop a
-    note there too so its cross-session TF-IDF recall picks this up. Silent
+    note there too so its cross-session lexical recall picks this up. Silent
     no-op if session-memory isn't present -- dev-recap must work standalone."""
     sess_dir = os.path.join(root, ".agent", "skills", "session-memory")
     if not os.path.isdir(sess_dir):

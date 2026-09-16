@@ -135,11 +135,34 @@ KEYWORDS = {
     "str", "int", "list", "dict", "type", "bool", "func", "end", "then", "elif",
 }
 
-SECRET_TEXT = re.compile(
-    r"(?i)(?:api[_-]?key|secret|passw(?:or)?d|token|bearer\s|access[_-]?key"
-    r"|private[_-]?key|-----BEGIN|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}"
+# Credential *shapes*: a string that looks like this is a secret value, and
+# can never be a legitimate identifier. Safe to apply anywhere.
+SECRET_LITERAL = re.compile(
+    r"(?i)(?:-----BEGIN|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}"
     r"|sk-[A-Za-z0-9]{20,}|xox[baprs]-)"
 )
+
+# A credential-ish word *bound to a literal value* -- `api_key="sk-live-.."`,
+# `password: 'hunter2xyz'`. The binding is what makes it a secret.
+#
+# The word on its own deliberately is NOT enough. An earlier version of this
+# file matched the bare words (token, secret, password, api_key, ...) and
+# applied that to symbol *names*, which silently deleted every symbol whose
+# name merely mentioned the concept -- `check_password`, `refreshUserAuthToken`,
+# `TokenStore`, `SecretManager`. Measured against django/django that was 349
+# distinct symbols missing from the index, concentrated precisely on the
+# authentication code where "the index says it does not exist" is most
+# dangerous. A name is an identifier, not a value.
+SECRET_ASSIGNMENT = re.compile(
+    r"(?i)(?:api[_-]?key|secret|passw(?:or)?d|token|bearer|access[_-]?key"
+    r"|private[_-]?key)\s*[:=]\s*['\"][^'\"]{8,}"
+)
+
+
+def looks_like_secret_value(text):
+    """True only for text that plausibly *contains a credential*, not for
+    text that merely names one."""
+    return bool(SECRET_LITERAL.search(text) or SECRET_ASSIGNMENT.search(text))
 
 
 def is_secret_path(rel):
@@ -475,11 +498,11 @@ def extract(rel, text, lang):
             name = name.strip('"`')
             if name.lower() in KEYWORDS or len(name) < 2:
                 continue
-            if SECRET_TEXT.search(name):
+            if SECRET_LITERAL.search(name):
                 continue
             line = text.count("\n", 0, m.start()) + 1
             sig = m.group(0).strip()
-            if len(sig) > 160 or SECRET_TEXT.search(sig):
+            if len(sig) > 160 or looks_like_secret_value(sig):
                 sig = name
             syms.append((name, kind, line, sig))
     seen = set()
@@ -501,7 +524,7 @@ def extract(rel, text, lang):
                 verb = g[0].upper() if len(g) > 1 else "ANY"
                 path = g[-1]
                 if path.startswith(("/", "http")) or "/" in path:
-                    if not SECRET_TEXT.search(path) and len(path) < 200:
+                    if not looks_like_secret_value(path) and len(path) < 200:
                         routes.append((verb, path))
     return uniq, sorted(set(imps))[:80], sorted(set(routes))[:80]
 

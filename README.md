@@ -212,6 +212,39 @@ baseline is capped at 6 files read per question, which understates its
 true cost — these ratios are a floor, not a ceiling), and raw JSON output:
 [`benchmarks/README.md`](benchmarks/README.md).
 
+### Cheap is the easy half. Is it *correct*?
+
+Token cost is the comfortable number to publish. The harder one is whether
+the thing recalled is the thing you wanted — so that gets measured too, over
+a shipped dataset, with the failures printed:
+
+| Retrieval method | recall@1 | recall@3 | MRR | queries with no hit |
+|---|---|---|---|---|
+| v0.4.0 — plain tokenizer + TF-IDF cosine | 0.450 | 0.625 | 0.588 | 6 / 20 |
+| v0.5.0 — code-aware tokenizer + BM25 | **0.675** | **0.775** | **0.787** | **3 / 20** |
+
+```bash
+python3 evals/recall_eval.py --scorer tfidf   # the old behaviour
+python3 evals/recall_eval.py --scorer bm25    # the new one, same dataset
+```
+
+Per query it is 5 better, 15 unchanged, 0 worse. The gain is concentrated
+where the old tokenizer was structurally blind: it lowercased before
+splitting, so `getUserById` became one opaque term and "where do we look up
+a user by id" recalled *nothing*. On that bucket of queries, recall@3 went
+from 0.700 to **1.000**.
+
+**Three queries still miss, under both methods, and the harness prints them
+every run.** "What did we make faster recently" shares no vocabulary with
+the entry recording a p95 drop from 1.8s to 220ms — a human sees it
+instantly, lexical retrieval cannot, and no parameter tuning changes that.
+Fixing it properly needs embeddings, which would mean a model download and
+the end of the zero-dependency property this kit exists for. That trade is
+refused on purpose, and the table is how you hold us to saying so.
+
+Methodology, the authoring-bias disclosure, and why these numbers are **not**
+comparable to LongMemEval or LOCOMO scores: [`evals/README.md`](evals/README.md).
+
 ### Case study: the same project, built twice
 
 The benchmark above measures *reading* an existing repo. This measures
@@ -304,6 +337,7 @@ Then add to your project's `.gitignore`:
 |---|---|
 | Orient in an unfamiliar repo | `arch` |
 | Where is X defined? | `def X` · `search '<regex>' --kind class` |
+| **I don't know what it's called** | **`find <plain words>`** — ranks symbols by words, no regex needed |
 | What breaks if I change X? | `callers X` · `impact <path>` |
 | What does this file depend on? | `file <path>` · `callees <path>` |
 | Who imports this module? | `importers <module>` |
@@ -314,6 +348,20 @@ Then add to your project's `.gitignore`:
 | Is the codebase growing/shrinking, where? | `drift` (needs 2+ builds logged — see below) |
 
 All verbs accept `--limit N`, `--json`, and `--root <dir>`.
+
+`find` is the one to reach for when you can describe what you want but not
+name it. Identifiers are split, so plain words reach camelCase symbols:
+
+```console
+$ query.py find verify a users password        # django/django, 6,901 files
+0.42  django/contrib/auth/hashers.py:39   function  verify_password
+0.26  django/contrib/auth/hashers.py:251  function  verify
+```
+
+That took 0.5s, with no embedding model, no vector store, and no language
+server. It is lexical ranking, not semantics — a symbol sharing no words
+with your phrasing will not surface, and `find` says so rather than
+pretending otherwise.
 
 `drift` compares the current build against a past one using
 `.agent/memory/history/drift-log.jsonl` — one compact, derived-stats-only
@@ -328,7 +376,7 @@ no-op rebuild never adds a duplicate entry.
 
 `codebase-memory` knows the *code*. `session-memory` knows the
 *conversation* — an append-only local log of prompts and turns, searched by
-lexical (TF-IDF) similarity, so a session that starts after an earlier one
+lexical (BM25) similarity, so a session that starts after an earlier one
 ended can recall what that session established.
 
 ```bash
@@ -617,9 +665,10 @@ markdown-and-scripts approach they can read in one sitting and audit in ten
 minutes — including its own optional MCP server (`mcp-bridge`), a stdlib
 stdio process this kit starts itself rather than a hosted one.
 
-`session-memory` is not semantic search either — its TF-IDF recall matches
+`session-memory` is not semantic search either — its BM25 recall matches
 shared vocabulary, not paraphrased meaning, and it is not reinforcement
-learning in the ML sense; see its section above. `tool-provisioning` is not
+learning in the ML sense; `evals/` measures exactly where that ceiling
+sits and publishes the queries it still fails. `tool-provisioning` is not
 a package manager or a sandbox — it never installs anything without an
 explicit yes from a human in the current chat, and it never uninstalls
 anything it didn't itself install. `spec-first` is not a stage-gate or a
@@ -645,7 +694,10 @@ Stdlib `unittest` only — no `pytest`, no test dependencies to install, so
 the "zero dependencies" claim holds for development too. Covers every
 skill's engine at the unit level (tokenizing, redaction, ranking, org
 policy, ledger semantics, PRD/TRD parsing) plus subprocess-level smoke
-tests that run the actual installers and hooks the way a real user would.
+tests that run the actual installers, hooks, and MCP protocol handshake
+the way a real client would. CI also runs `evals/` on every push and fails
+if retrieval quality regresses below the numbers published above — the
+README cannot quietly go stale.
 CI (`.github/workflows/ci.yml`) runs the same suite on Ubuntu/Windows/macOS
 across Python 3.8 and 3.12 on every push and PR.
 
@@ -665,6 +717,7 @@ and `.agent/work/`, zero third-party dependencies.
 | [`.agent/skills/codebase-memory/SKILL.md`](.agent/skills/codebase-memory/SKILL.md) | [`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md) |
 | [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md) | [`.agent/skills/spec-first/SKILL.md`](.agent/skills/spec-first/SKILL.md) |
 | [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md) | [`.agent/skills/mcp-bridge/SKILL.md`](.agent/skills/mcp-bridge/SKILL.md) |
+| [`benchmarks/README.md`](benchmarks/README.md) — what it costs | [`evals/README.md`](evals/README.md) — whether it's correct |
 | `tests/` — the test suite is also readable documentation of expected behaviour | |
 
 ## Contributing

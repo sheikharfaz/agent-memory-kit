@@ -11,6 +11,7 @@ itself, not a hosted service. Requires Python 3.8+ and, ideally, git.
 AGENTS.md                                  the contract, read every session
 SECURITY.md                                threat model, for your AppSec/OSPO reviewer
 .github/copilot-instructions.md            Copilot entry point → points at AGENTS.md
+.agent/lib/retrieval.py                    shared tokenizer + BM25 ranking
 .agent/skills/codebase-memory/SKILL.md     the skill definition
 .agent/skills/codebase-memory/index.py     builder
 .agent/skills/codebase-memory/query.py     read-only query CLI
