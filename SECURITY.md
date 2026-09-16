@@ -22,11 +22,26 @@ under their own OS-level permissions.
 | `tool-provisioning` (`toolkit.py`) | its own registry/ledger | only `.agent/memory/tools/` | **only** the install/uninstall command a human approved in chat, plus `doctor`'s bare TCP reachability probes (nothing sent or fetched), plus the one explicit `sync-org-registry` command if a developer runs it |
 | `dev-recap` (`recap_log.py`) | `git diff` output, its own logs, `codebase-memory`'s index if present | only `.agent/memory/learning/` | **none, ever** |
 | `spec-first` (`spec_first.py`) | its own PRD.md/TRD.md files, `git` (none directly — reads via the agent's own tool use) | only `.agent/work/<task-slug>/` (the same directory RPI already used) | **none, ever** |
+| `mcp-bridge` (`server.py`) | whatever `codebase-memory`/`session-memory` already read, via subprocess | only what those two already write (`.agent/memory/graph/`, `CODEBASE_MAP.md`, `.agent/memory/session/`) — nothing new | **none, ever** |
 
 Nothing here phones home, collects telemetry, or uploads anything by itself.
 Every network-capable action is either a command a human explicitly
 approved in the current conversation, or a diagnostic that establishes a TCP
 connection and reads nothing back.
+
+`mcp-bridge` is opt-in and, unlike the other components, runs as a
+long-lived local process for as long as the MCP host that launched it keeps
+it open — same lifetime as any other MCP server, not a background daemon
+this kit starts on its own. Its input channel is its own stdin, written to
+only by the process that launched it (the MCP host); it never binds a
+network port or accepts a remote connection. It exposes 20 tools, all
+thin passthroughs to `codebase-memory`/`session-memory` CLI verbs the rest
+of this kit already ships, with the same read/write surface listed above —
+see
+[`.agent/skills/mcp-bridge/SKILL.md`](.agent/skills/mcp-bridge/SKILL.md)
+for the full tool list and, just as importantly, which verbs (all of
+`tool-provisioning`'s installs, and `dev-recap`'s/`spec-first`'s write
+verbs) were deliberately left out.
 
 ## Threat model
 

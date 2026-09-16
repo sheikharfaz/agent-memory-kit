@@ -15,7 +15,8 @@ param(
     [Parameter(Mandatory = $true, Position = 0)]
     [string]$Target,
     [switch]$Force,
-    [switch]$WireHooks
+    [switch]$WireHooks,
+    [switch]$WireMcp
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,7 +53,10 @@ $files = @(
     '.agent/skills/dev-recap/SKILL.md',
     '.agent/skills/dev-recap/recap_log.py',
     '.agent/skills/spec-first/SKILL.md',
-    '.agent/skills/spec-first/spec_first.py'
+    '.agent/skills/spec-first/spec_first.py',
+    '.agent/skills/mcp-bridge/SKILL.md',
+    '.agent/skills/mcp-bridge/server.py',
+    '.agent/skills/mcp-bridge/wire_mcp.py'
 )
 
 $copied = 0
@@ -83,6 +87,12 @@ if ($WireHooks) {
     python "$src\.agent\skills\session-memory\wire_hooks.py" "$Target"
 }
 
+if ($WireMcp) {
+    Write-Host ""
+    Write-Host "Wiring mcp-bridge into $Target\.mcp.json ..."
+    python "$src\.agent\skills\mcp-bridge\wire_mcp.py" "$Target"
+}
+
 Write-Host ""
 Write-Host "Next:"
 Write-Host "  cd `"$Target`""
@@ -100,4 +110,10 @@ if (-not $WireHooks) {
     Write-Host "  - re-run with -WireHooks to register the SessionStart / UserPromptSubmit /"
     Write-Host "    Stop hooks in .claude\settings.json (Claude Code only; see SETUP.md)"
     Write-Host "  - tool-provisioning: python .agent\skills\tool-provisioning\toolkit.py search '<need>'"
+}
+if (-not $WireMcp) {
+    Write-Host ""
+    Write-Host "Not using Claude Code, or want codebase-memory/session-memory as live tools"
+    Write-Host "in Cursor, Claude Desktop, or any other MCP-capable host? Re-run with"
+    Write-Host "-WireMcp to register mcp-bridge in .mcp.json -- see its SKILL.md."
 }

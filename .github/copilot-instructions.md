@@ -48,7 +48,11 @@ every phase boundary. Stop for approval after the TRD. Details in
 If present: `.agent/skills/session-memory/` (cross-session recall of past
 prompts/turns), `.agent/skills/tool-provisioning/` (propose-only tool
 install/uninstall — never installs anything without explicit approval in
-the current conversation), and `.agent/skills/dev-recap/` (a closing recap
+the current conversation), `.agent/skills/dev-recap/` (a closing recap
 + optional quiz so the developer understands what shipped, plus a
-project-familiarity profile asked once at first contact). All opt-in — see
-`AGENTS.md` §13–15 and their own `SKILL.md` files.
+project-familiarity profile asked once at first contact), and
+`.agent/skills/mcp-bridge/` (the same codebase-memory/session-memory
+capabilities as a live MCP server, for hosts that aren't Claude Code —
+irrelevant if you're reading this file, since that means you're already
+using the CLI/file path instead). All opt-in — see `AGENTS.md` §13–16 and
+their own `SKILL.md` files.

@@ -84,6 +84,47 @@ class TestAppendAndLoad(TempRoot):
         self.assertEqual(len(loaded), 1)  # corrupt line skipped, not fatal
 
 
+class TestDisableEnvVar(TempRoot):
+    """AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY must silence direct
+    CLI/library use of this module, not just the hooks that already
+    short-circuit before calling it (see hooks/_common.py)."""
+
+    def setUp(self):
+        super().setUp()
+        self._old = os.environ.get(mem.DISABLE_ENV)
+        mem.append_entry(self.root, "sess1", self.root, "note", "before disabling")
+
+    def tearDown(self):
+        if self._old is None:
+            os.environ.pop(mem.DISABLE_ENV, None)
+        else:
+            os.environ[mem.DISABLE_ENV] = self._old
+        super().tearDown()
+
+    def test_disabled_recognizes_truthy_values(self):
+        for v in ("1", "true", "True", "YES", "yes"):
+            os.environ[mem.DISABLE_ENV] = v
+            self.assertTrue(mem.disabled(), v)
+        for v in ("0", "false", "", "no"):
+            os.environ[mem.DISABLE_ENV] = v
+            self.assertFalse(mem.disabled(), v)
+
+    def test_append_entry_noop_when_disabled(self):
+        os.environ[mem.DISABLE_ENV] = "1"
+        e = mem.append_entry(self.root, "sess1", self.root, "note", "should not land")
+        self.assertIsNone(e)
+        texts = [x["text"] for x in mem.load_entries(self.root)]
+        self.assertEqual(texts, ["before disabling"])
+
+    def test_recall_empty_when_disabled(self):
+        os.environ[mem.DISABLE_ENV] = "1"
+        self.assertEqual(mem.recall(self.root, "before disabling"), [])
+
+    def test_recent_empty_when_disabled(self):
+        os.environ[mem.DISABLE_ENV] = "1"
+        self.assertEqual(mem.recent(self.root), [])
+
+
 class TestRecallAndRecent(TempRoot):
     def test_recall_ranks_lexically_similar_higher(self):
         mem.append_entry(self.root, "sessA", self.root, "prompt",

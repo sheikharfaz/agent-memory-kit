@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
 ![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)
 ![Network calls: none by default](https://img.shields.io/badge/network%20calls-none%20by%20default-brightgreen)
+![MCP: supported](https://img.shields.io/badge/MCP-supported-blue)
 
 [What it does](#what-is-this-in-plain-english) ·
 [Who it's for](#who-its-for) ·
@@ -123,20 +124,23 @@ permission.** That shapes everything else about it.
 
 ---
 
-A drop-in `AGENTS.md` contract, a local codebase index, and four focused
+A drop-in `AGENTS.md` contract, a local codebase index, and five focused
 companion skills — cross-session continuity, propose-only tool access, a
-PRD/TRD discipline in place of vibe coding, and a closing recap so the
-developer understands what an agent just shipped under their name — for AI
-coding agents working in real repositories. Install the whole kit, or just
-the pieces you want.
+PRD/TRD discipline in place of vibe coding, a closing recap so the
+developer understands what an agent just shipped under their name, and an
+MCP bridge for hosts that aren't Claude Code — for AI coding agents working
+in real repositories. Install the whole kit, or just the pieces you want.
 
-No MCP server. No daemon. No binary. No dependencies beyond Python 3.8+ —
-including the test suite (`tests/`, stdlib `unittest`). `codebase-memory`
-makes no network calls, period. Every other skill documents its own,
-narrower trade-off: `session-memory`, `dev-recap`, and `spec-first` make no
-network calls at all; `tool-provisioning` makes none either, except the
-install command you explicitly approve (or a `doctor` reachability probe
-that fetches nothing, or the one explicit `sync-org-registry` command).
+No daemon. No binary. No dependencies beyond Python 3.8+ — including the
+test suite (`tests/`, stdlib `unittest`). `codebase-memory` makes no
+network calls, period. Every other skill documents its own, narrower
+trade-off: `session-memory`, `dev-recap`, and `spec-first` make no network
+calls at all; `tool-provisioning` makes none either, except the install
+command you explicitly approve (or a `doctor` reachability probe that
+fetches nothing, or the one explicit `sync-org-registry` command);
+`mcp-bridge` is a local stdio process this kit starts itself, not a hosted
+service — and it's opt-in, like the other three: the rest of the kit works
+exactly the same with or without it installed.
 
 See [Enterprise readiness](#enterprise-readiness) above and
 [SECURITY.md](SECURITY.md) for the full threat model.
@@ -177,6 +181,11 @@ composing into one lifecycle rather than five separate tools bolted together:
 | Before touching code | `spec-first` | A PRD (what, why) and a TRD (how, and real alternatives rejected) instead of vibe coding |
 | When a task needs a tool | `tool-provisioning` | Propose → approve → install → use → uninstall, with a full local audit ledger |
 | Closing out | `dev-recap` | A plain-English recap, a gap scan, and an optional quiz so the developer actually understands what shipped |
+
+A sixth skill, `mcp-bridge`, isn't a lifecycle stage — it's an alternate
+front door onto `codebase-memory` and `session-memory` for MCP-capable
+hosts that aren't Claude Code (Cursor, Claude Desktop, ...). See its own
+section below.
 
 Reference numbers from the test suite: 286k LOC indexed in 2.0s single-threaded,
 producing a 1,650-token map. Structural queries return in ~0.1s.
@@ -452,12 +461,36 @@ generator with the same accuracy contract as `codebase-memory`'s `orphans`:
 a clean result means the heuristic found nothing, never that nothing is
 missing. Detail: [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md).
 
+## mcp-bridge — live tools for hosts that aren't Claude Code
+
+Every skill above reaches an agent through files (`AGENTS.md`,
+`CODEBASE_MAP.md`) or Claude Code's own hooks. `mcp-bridge` is the third
+path: a stdlib-only [Model Context Protocol](https://modelcontextprotocol.io)
+server, so Cursor, Claude Desktop, or any other MCP-capable host gets
+`codebase-memory` and `session-memory` as 20 live, schema-described tools
+instead of relying on file-reading conventions.
+
+```bash
+python3 .agent/skills/mcp-bridge/server.py --root /path/to/repo
+```
+
+Every tool is a direct passthrough to the same `query.py`/`index.py`/
+`memory.py` the CLI already uses — no duplicated logic, so a tool's answer
+always matches what the CLI would print, accuracy caveats included. Two
+tools write anything (`codebase_build`, into `.agent/memory/graph/` only;
+`session_remember`, one `note` entry) — everything else is read-only, and
+`tool-provisioning`'s installs are deliberately excluded, keeping this
+kit's propose-only safety posture intact for hosts with no approval step
+of their own. `install.py|.sh|.ps1 --wire-mcp` registers it in your
+project's `.mcp.json` automatically. Detail, full tool list, and what's
+excluded and why: [`.agent/skills/mcp-bridge/SKILL.md`](.agent/skills/mcp-bridge/SKILL.md).
+
 ---
 
 ## What the agent contract enforces
 
 `AGENTS.md` is loaded every turn and stays under ~5k tokens covering all
-five skills' worth of contract. It defines:
+six skills' worth of contract. It defines:
 
 - **Retrieval ladder** — map → query → shard → targeted grep → line range →
   whole file. Never more than 3 whole files before answering. Never a 1000+ line
@@ -557,6 +590,13 @@ getting it for free. `dev-recap` and `spec-first` in particular are just
 `AGENTS.md` §5/§15 plus a CLI each — no hooks needed at all, so both work
 in any harness that reads `AGENTS.md`.
 
+Or skip the hand-invoking entirely: `mcp-bridge` puts `codebase-memory` and
+`session-memory` behind the standard [MCP](https://modelcontextprotocol.io)
+stdio transport, which Cursor, Claude Desktop, and most other modern
+harnesses speak natively. `--wire-mcp` at install time gets you the closest
+thing to Claude Code's own hooks — live, schema-described tools instead of
+a CLI you invoke by hand — on any of them.
+
 If you already run RPI-style chat modes (research/plan/implement), they
 compose directly: `AGENTS.md` §5 defines a PRD step before Research and a
 TRD-quality bar on Plan, with the same artifact slots your chat modes
@@ -572,9 +612,10 @@ with sub-millisecond queries and a proper knowledge graph, use
 [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp), which is
 where several ideas here came from — the tiered agent profiles, the coverage-vs-
 completeness distinction, and the layered ignore model. This kit is the
-zero-dependency, no-MCP version of the same idea, for people who want a
+zero-dependency, regex-based version of the same idea, for people who want a
 markdown-and-scripts approach they can read in one sitting and audit in ten
-minutes.
+minutes — including its own optional MCP server (`mcp-bridge`), a stdlib
+stdio process this kit starts itself rather than a hosted one.
 
 `session-memory` is not semantic search either — its TF-IDF recall matches
 shared vocabulary, not paraphrased meaning, and it is not reinforcement
@@ -588,7 +629,9 @@ can't do for you. `dev-recap` is not a gate, a scorecard, or proof of
 correctness — the quiz is a comprehension check, not a test suite, `gaps`
 is a heuristic lead, not a guarantee, and the familiarity profile is for
 the developer's own benefit only; nothing about any of it blocks a task or
-reports to anyone else.
+reports to anyone else. `mcp-bridge` adds no new capability or accuracy of
+its own — it is a transport, not an engine; every answer it returns still
+carries the exact same caveats as the CLI verb it calls.
 
 ---
 
@@ -621,7 +664,8 @@ and `.agent/work/`, zero third-party dependencies.
 | [SECURITY.md](SECURITY.md) — threat model & data flow | [CHANGELOG.md](CHANGELOG.md) — version history |
 | [`.agent/skills/codebase-memory/SKILL.md`](.agent/skills/codebase-memory/SKILL.md) | [`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md) |
 | [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md) | [`.agent/skills/spec-first/SKILL.md`](.agent/skills/spec-first/SKILL.md) |
-| [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md) | `tests/` — the test suite is also readable documentation of expected behaviour |
+| [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md) | [`.agent/skills/mcp-bridge/SKILL.md`](.agent/skills/mcp-bridge/SKILL.md) |
+| `tests/` — the test suite is also readable documentation of expected behaviour | |
 
 ## Contributing
 

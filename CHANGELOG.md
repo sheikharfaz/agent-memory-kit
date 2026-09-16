@@ -7,6 +7,40 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-09-16
+
+### Added
+- `mcp-bridge`: a stdlib-only Model Context Protocol server (`server.py`,
+  stdio transport, newline-delimited JSON-RPC 2.0 per
+  https://modelcontextprotocol.io -- no `mcp` package, no third-party
+  dependency) exposing `codebase-memory` and `session-memory` as 20 live,
+  schema-described tools, for any MCP-capable host -- Cursor, Claude
+  Desktop, a custom Agent-SDK build -- not just Claude Code's own hooks.
+  Every tool is a direct subprocess passthrough to the same `query.py`/
+  `index.py`/`memory.py` the CLI already uses, so an MCP answer always
+  matches the equivalent CLI output, same accuracy caveats included.
+  Exactly two tools write anything (`codebase_build`, only
+  `.agent/memory/graph/`; `session_remember`, one `note` entry) -- every
+  other tool is read-only, and `tool-provisioning`'s install/uninstall,
+  and `dev-recap`'s/`spec-first`'s write verbs, are deliberately NOT
+  exposed, keeping the kit's propose-only safety posture intact for hosts
+  with no conversational approval step of their own. `wire_mcp.py` merges
+  an entry into a target repo's `.mcp.json`, idempotently; `install.py|
+  .sh|.ps1 --wire-mcp` runs it automatically. `AGENTS.md` §16, `SETUP.md`
+  step 10, `SECURITY.md`, and the README document it; full tool list and
+  what's excluded and why: `.agent/skills/mcp-bridge/SKILL.md`.
+
+### Fixed
+- `session-memory`: `AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY` only ever
+  silenced the Claude Code hooks (`hooks/_common.py`'s own check) -- direct
+  CLI use of `memory.py record`/`recall`/`recent`, and now `mcp-bridge`'s
+  `session_*` tools, ignored it entirely. Moved the guard into `memory.py`
+  itself (`append_entry`/`recall`/`recent`), so the same org-wide opt-out
+  now applies uniformly regardless of which entry point reaches it.
+  `cmd_record`'s CLI message also no longer claims "(empty text, not
+  recorded)" when the real reason was the kill switch.
+- `VERSION` was still reading `0.2.0` after the `v0.3.0` tag.
+
 ## [0.3.0] — 2026-09-16
 
 ### Added

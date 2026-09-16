@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # agent-memory-kit installer
 #
-#   bash install.sh <target-repo-dir> [--force]
+#   bash install.sh <target-repo-dir> [--force] [--wire-hooks] [--wire-mcp]
 #
 # Copies the kit into a target repository. Local file copy only: no network,
 # no package installs, no writes outside the target directory. Existing files
@@ -12,9 +12,11 @@ SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET="${1:-}"
 FORCE=0
 WIRE_HOOKS=0
+WIRE_MCP=0
 for arg in "${@:2}"; do
   [ "$arg" = "--force" ] && FORCE=1
   [ "$arg" = "--wire-hooks" ] && WIRE_HOOKS=1
+  [ "$arg" = "--wire-mcp" ] && WIRE_MCP=1
 done
 
 if [ -z "$TARGET" ]; then
@@ -53,6 +55,9 @@ FILES=(
   ".agent/skills/dev-recap/recap_log.py"
   ".agent/skills/spec-first/SKILL.md"
   ".agent/skills/spec-first/spec_first.py"
+  ".agent/skills/mcp-bridge/SKILL.md"
+  ".agent/skills/mcp-bridge/server.py"
+  ".agent/skills/mcp-bridge/wire_mcp.py"
 )
 
 copied=0
@@ -79,6 +84,12 @@ if [ "$WIRE_HOOKS" -eq 1 ]; then
   python3 "$SRC/.agent/skills/session-memory/wire_hooks.py" "$TARGET"
 fi
 
+if [ "$WIRE_MCP" -eq 1 ]; then
+  echo
+  echo "Wiring mcp-bridge into $TARGET/.mcp.json ..."
+  python3 "$SRC/.agent/skills/mcp-bridge/wire_mcp.py" "$TARGET"
+fi
+
 echo
 echo "Next:"
 echo "  cd \"$TARGET\""
@@ -93,4 +104,10 @@ if [ "$WIRE_HOOKS" -eq 0 ]; then
   echo "  - re-run with --wire-hooks to register the SessionStart / UserPromptSubmit /"
   echo "    Stop hooks in .claude/settings.json (Claude Code only; see SETUP.md)"
   echo "  - tool-provisioning: python .agent/skills/tool-provisioning/toolkit.py search '<need>'"
+fi
+if [ "$WIRE_MCP" -eq 0 ]; then
+  echo
+  echo "Not using Claude Code, or want codebase-memory/session-memory as live tools"
+  echo "in Cursor, Claude Desktop, or any other MCP-capable host? Re-run with"
+  echo "--wire-mcp to register mcp-bridge in .mcp.json -- see its SKILL.md."
 fi

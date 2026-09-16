@@ -2,7 +2,7 @@
 """
 agent-memory-kit installer -- cross-platform, stdlib-only.
 
-  python3 install.py <target-repo-dir> [--force] [--wire-hooks]
+  python3 install.py <target-repo-dir> [--force] [--wire-hooks] [--wire-mcp]
 
 Why this exists alongside install.sh/install.ps1: some corporate Windows
 images set PowerShell's execution policy to Restricted, which blocks
@@ -14,7 +14,8 @@ for codebase-memory. Prefer this entry point on a locked-down machine.
 Guarantees, same as the shell installers: local file copy only, no network,
 no package installs, no writes outside the target directory (and, with
 --wire-hooks, a merge into <target>/.claude/settings.json -- see
-wire_hooks.py). Existing files are never overwritten unless --force.
+wire_hooks.py; with --wire-mcp, a merge into <target>/.mcp.json -- see
+mcp-bridge/wire_mcp.py). Existing files are never overwritten unless --force.
 """
 
 import argparse
@@ -47,6 +48,9 @@ FILES = [
     ".agent/skills/dev-recap/recap_log.py",
     ".agent/skills/spec-first/SKILL.md",
     ".agent/skills/spec-first/spec_first.py",
+    ".agent/skills/mcp-bridge/SKILL.md",
+    ".agent/skills/mcp-bridge/server.py",
+    ".agent/skills/mcp-bridge/wire_mcp.py",
 ]
 
 
@@ -56,6 +60,8 @@ def main():
     p.add_argument("--force", action="store_true", help="overwrite existing files")
     p.add_argument("--wire-hooks", action="store_true",
                     help="also merge session-memory hooks into .claude/settings.json")
+    p.add_argument("--wire-mcp", action="store_true",
+                    help="also register the mcp-bridge server in .mcp.json")
     args = p.parse_args()
 
     target = os.path.abspath(args.target)
@@ -89,6 +95,12 @@ def main():
         wire_script = os.path.join(SRC, ".agent", "skills", "session-memory", "wire_hooks.py")
         subprocess.run([sys.executable, wire_script, target], check=False)
 
+    if args.wire_mcp:
+        print()
+        print("Wiring mcp-bridge into %s ..." % os.path.join(target, ".mcp.json"))
+        wire_script = os.path.join(SRC, ".agent", "skills", "mcp-bridge", "wire_mcp.py")
+        subprocess.run([sys.executable, wire_script, target], check=False)
+
     print()
     print("Next:")
     print("  cd %s" % target)
@@ -106,6 +118,11 @@ def main():
         print("  - re-run with --wire-hooks to register the SessionStart / UserPromptSubmit /")
         print("    Stop hooks in .claude/settings.json (Claude Code only; see SETUP.md)")
         print("  - tool-provisioning: python .agent/skills/tool-provisioning/toolkit.py search '<need>'")
+    if not args.wire_mcp:
+        print()
+        print("Not using Claude Code, or want codebase-memory/session-memory as live tools")
+        print("in Cursor, Claude Desktop, or any other MCP-capable host? Re-run with")
+        print("--wire-mcp to register mcp-bridge in .mcp.json -- see its SKILL.md.")
 
 
 if __name__ == "__main__":

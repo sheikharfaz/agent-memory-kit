@@ -43,6 +43,17 @@ MAX_TEXT_CHARS = 4000
 DEFAULT_KEEP_LAST = 4000
 DEFAULT_RECALL_LIMIT = 5
 MIN_SCORE = 0.05
+DISABLE_ENV = "AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY"
+
+
+def disabled():
+    """Org-wide or per-developer opt-out (e.g. via a shell profile pushed by
+    MDM, or a compliance policy): set this env var and every entry point
+    into this module -- hooks, the CLI, and mcp-bridge's tool calls alike --
+    becomes a silent no-op. The hooks also short-circuit earlier, before
+    reaching this module at all (see hooks/_common.py); this guard is what
+    makes the same opt-out apply to direct CLI/MCP use, not just hooks."""
+    return os.environ.get(DISABLE_ENV, "").strip().lower() in ("1", "true", "yes")
 
 STOPWORDS = {
     "the", "a", "an", "and", "or", "but", "if", "then", "so", "for", "to",
@@ -168,6 +179,8 @@ def rewrite_entries(root, entries):
 # ---------------------------------------------------------------- writing ---
 
 def append_entry(root, session_id, cwd, kind, text, tags=None):
+    if disabled():
+        return None
     text = redact((text or "").strip())
     if not text:
         return None
@@ -242,6 +255,8 @@ def _cosine(a, b):
 
 def recall(root, query_text, limit=DEFAULT_RECALL_LIMIT, exclude_session=None,
            kinds=None, min_score=MIN_SCORE):
+    if disabled():
+        return []
     entries = list(load_entries(root))
     if exclude_session:
         entries = [e for e in entries if e.get("session_id") != exclude_session]
@@ -275,6 +290,8 @@ def recall(root, query_text, limit=DEFAULT_RECALL_LIMIT, exclude_session=None,
 
 
 def recent(root, exclude_session=None, limit=DEFAULT_RECALL_LIMIT, one_per_session=True):
+    if disabled():
+        return []
     # load_entries() yields in append (chronological) order. Timestamps only
     # have 1-second resolution, so two entries written in the same second --
     # common, e.g. two prompts in quick succession -- can tie on `ts`. Sort
@@ -342,6 +359,9 @@ def _snippet(text, n=140):
 
 def cmd_record(args):
     root = find_repo_root(args.root)
+    if disabled():
+        print("(session-memory disabled via %s, not recorded)" % DISABLE_ENV)
+        return
     text = args.text
     if text == "-":
         text = sys.stdin.read()

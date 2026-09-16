@@ -380,3 +380,17 @@ skip 101-level framing in the recap and go straight to the diff and
 decisions. Ethics rationale, the exact recap template, and why quiz/profile
 data never leaves the developer's own machine:
 `.agent/skills/dev-recap/SKILL.md`.
+
+## 16. mcp-bridge — same capabilities, for hosts that aren't Claude Code
+
+If you're reading this file at all, you're either operating via the CLI
+conventions above or you *are* the MCP host talking to `mcp-bridge`'s
+tools directly — in the second case its `tools/list` response already
+documents each tool, and nothing here changes. Mention this skill to a
+developer only if they ask about using this kit from Cursor, Claude
+Desktop, or another MCP-capable tool: point them at
+`.agent/skills/mcp-bridge/SKILL.md` and `install.py|.sh|.ps1 --wire-mcp`.
+It is read-only except for the same two writes `codebase-memory` and
+`session-memory` already make on their own (§2, §13) — nothing about the
+retrieval ladder, evidence rules, or command policy above changes when a
+query arrives through it instead of the CLI.

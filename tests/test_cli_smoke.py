@@ -40,7 +40,9 @@ class TestInstallPy(TempRepo):
         for rel in ("AGENTS.md", "SETUP.md", "SECURITY.md",
                     ".agent/skills/session-memory/memory.py",
                     ".agent/skills/tool-provisioning/toolkit.py",
-                    ".agent/skills/dev-recap/recap_log.py"):
+                    ".agent/skills/dev-recap/recap_log.py",
+                    ".agent/skills/mcp-bridge/server.py",
+                    ".agent/skills/mcp-bridge/wire_mcp.py"):
             self.assertTrue(os.path.exists(os.path.join(self.repo, rel)), rel)
 
     def test_install_is_idempotent_without_force(self):
@@ -68,6 +70,40 @@ class TestInstallPy(TempRepo):
     def test_refuses_to_install_into_kit_itself(self):
         r = run([sys.executable, os.path.join(KIT_ROOT, "install.py"), KIT_ROOT])
         self.assertNotEqual(r.returncode, 0)
+
+    def test_wire_mcp_flag_merges_mcp_json_and_is_idempotent(self):
+        run([sys.executable, os.path.join(KIT_ROOT, "install.py"), self.repo, "--wire-mcp"])
+        mcp_path = os.path.join(self.repo, ".mcp.json")
+        self.assertTrue(os.path.exists(mcp_path))
+        with open(mcp_path) as fh:
+            config = json.load(fh)
+        entry = config["mcpServers"]["agent-memory-kit"]
+        self.assertEqual(entry["type"], "stdio")
+        self.assertEqual(entry["args"],
+                          [".agent/skills/mcp-bridge/server.py", "--root", "."])
+
+        # re-run: must not duplicate or reset an existing custom "command"
+        entry["command"] = "/custom/python3"
+        with open(mcp_path, "w") as fh:
+            json.dump(config, fh)
+        run([sys.executable, os.path.join(KIT_ROOT, "install.py"), self.repo,
+             "--wire-mcp", "--force"])
+        with open(mcp_path) as fh:
+            config2 = json.load(fh)
+        self.assertEqual(len(config2["mcpServers"]), 1)
+        self.assertEqual(config2["mcpServers"]["agent-memory-kit"]["command"],
+                          "/custom/python3")
+
+    def test_wire_mcp_preserves_other_servers_already_configured(self):
+        mcp_path = os.path.join(self.repo, ".mcp.json")
+        with open(mcp_path, "w") as fh:
+            json.dump({"mcpServers": {"other-server": {"type": "stdio",
+                                                         "command": "foo"}}}, fh)
+        run([sys.executable, os.path.join(KIT_ROOT, "install.py"), self.repo, "--wire-mcp"])
+        with open(mcp_path) as fh:
+            config = json.load(fh)
+        self.assertIn("other-server", config["mcpServers"])
+        self.assertIn("agent-memory-kit", config["mcpServers"])
 
 
 class TestSessionMemoryHooksAcrossSessions(TempRepo):

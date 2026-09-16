@@ -1,7 +1,9 @@
 # Setup — agent memory kit
 
-Drop-in for any repository. No install, no service, no MCP server, no network.
-Requires Python 3.8+ and, ideally, git.
+Drop-in for any repository. Core features need no install, no background
+service, no network. An MCP server is included but stays opt-in -- see
+step 10 -- and even then it is a local stdio process this kit starts
+itself, not a hosted service. Requires Python 3.8+ and, ideally, git.
 
 ## 1. Copy these into the repo root
 
@@ -30,6 +32,9 @@ copies everything, including these, by default):
 .agent/skills/dev-recap/recap_log.py           recap/quiz/gap-scan/familiarity CLI
 .agent/skills/spec-first/SKILL.md               the skill definition
 .agent/skills/spec-first/spec_first.py         PRD/TRD scaffold + check CLI
+.agent/skills/mcp-bridge/SKILL.md              the skill definition
+.agent/skills/mcp-bridge/server.py             stdlib-only MCP server (stdio)
+.agent/skills/mcp-bridge/wire_mcp.py           merges an entry into .mcp.json
 ```
 
 ## 2. Build the index once
@@ -213,6 +218,40 @@ python .agent/skills/spec-first/spec_first.py check <task-slug>
 python .agent/skills/spec-first/spec_first.py list
 ```
 
+## 10. Optional: mcp-bridge
+
+Everything above reaches an agent through files (`AGENTS.md`,
+`CODEBASE_MAP.md`) or, for `session-memory`, Claude Code's own hooks. If
+you're on a different MCP-capable host -- Cursor, Claude Desktop, a custom
+agent built on the Claude Agent SDK -- `mcp-bridge` exposes
+`codebase-memory` and `session-memory` as 20 live tools instead, over the
+standard MCP stdio transport. No `mcp` package, no third-party dependency:
+
+```bash
+bash /path/to/agent-memory-kit/install.sh /path/to/your/project --wire-mcp
+```
+
+merges an `agent-memory-kit` entry into your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "agent-memory-kit": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [".agent/skills/mcp-bridge/server.py", "--root", "."]
+    }
+  }
+}
+```
+
+Or run `python3 .agent/skills/mcp-bridge/wire_mcp.py .` any time later, or
+`claude mcp add --transport stdio --scope project agent-memory-kit -- python3
+.agent/skills/mcp-bridge/server.py --root .`. Idempotent either way. Full
+tool list, what's deliberately not exposed (tool-provisioning's installs,
+dev-recap's/spec-first's write verbs), and why:
+`.agent/skills/mcp-bridge/SKILL.md`.
+
 ## Very large repositories
 
 ```bash
@@ -234,5 +273,6 @@ engine. It is a fast, honest, dependency-free structural index whose limits are
 written into its own output so the agent quotes them back to you instead of
 inventing certainty. If you later want compiler-grade accuracy across 150+
 languages with sub-millisecond queries, that is what a real indexer like
-`codebase-memory-mcp` gives you — this kit is the zero-dependency, no-MCP
-version of the same idea.
+`codebase-memory-mcp` gives you — this kit is the zero-dependency, regex-based
+version of the same idea, with an optional stdlib MCP server of its own
+(`mcp-bridge`, step 10) rather than a hosted one.
