@@ -4,7 +4,10 @@ session-memory :: Stop hook.
 Fires when the agent finishes responding. Records the last assistant text
 turn from the transcript (not just what was asked, but what was actually
 said/done), so future recall has substance to match against. Also runs
-cheap periodic pruning so entries.jsonl never grows unbounded.
+cheap periodic pruning so entries.jsonl never grows unbounded, and stamps
+the codebase-memory map generation this session ended at (map_state.json),
+so a future SessionStart can tell the agent the map hasn't changed instead
+of staying silent.
 
 Best-effort transcript parsing: reads the Claude Code transcript JSONL at
 `transcript_path`, takes the last record whose `message.role == "assistant"`,
@@ -83,6 +86,8 @@ def run():
     if n and n % PRUNE_EVERY == 0:
         keep_days = os.environ.get(RETENTION_DAYS_ENV)
         mem.prune(root, keep_days=int(keep_days) if keep_days else None)
+
+    mem.record_map_generation(root, mem.current_map_generation(root), session_id)
 
 
 if __name__ == "__main__":

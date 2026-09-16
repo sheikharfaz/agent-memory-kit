@@ -146,6 +146,65 @@ class TestFamiliarityNudge(TempRepo):
         self.assertEqual(r.stdout.strip(), "")
 
 
+class TestMapFreshnessNote(TempRepo):
+    def setUp(self):
+        super().setUp()
+        run([sys.executable, os.path.join(KIT_ROOT, "install.py"), self.repo])
+        shutil.rmtree(os.path.join(self.repo, ".agent", "skills", "dev-recap"))
+        self.session_start = os.path.join(self.repo, ".agent", "skills", "session-memory",
+                                           "hooks", "session_start.py")
+        self.stop = os.path.join(self.repo, ".agent", "skills", "session-memory",
+                                  "hooks", "stop.py")
+        self.manifest = os.path.join(self.repo, ".agent", "memory", "graph", "manifest.json")
+
+    def _write_manifest(self, generation):
+        os.makedirs(os.path.dirname(self.manifest), exist_ok=True)
+        with open(self.manifest, "w", encoding="utf-8") as fh:
+            json.dump({"generation": generation}, fh)
+
+    def _run_session_start(self, session_id="sessB"):
+        payload = json.dumps({"session_id": session_id, "cwd": self.repo})
+        return run([sys.executable, self.session_start], cwd=self.repo, input_text=payload)
+
+    def _run_stop(self, session_id="sessA"):
+        payload = json.dumps({"session_id": session_id, "cwd": self.repo})
+        return run([sys.executable, self.stop], cwd=self.repo, input_text=payload)
+
+    def test_no_note_when_no_map_state_recorded(self):
+        self._write_manifest("gen1")
+        r = self._run_session_start()
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")
+
+    def test_note_appears_when_generation_matches_last_recorded(self):
+        self._write_manifest("gen1")
+        r = self._run_stop(session_id="sessA")
+        self.assertEqual(r.returncode, 0)
+
+        r = self._run_session_start(session_id="sessB")
+        self.assertEqual(r.returncode, 0)
+        self.assertTrue(r.stdout.strip())
+        out = json.loads(r.stdout)
+        ctx = out["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("CODEBASE_MAP.md is unchanged", ctx)
+        self.assertIn("sessA", ctx)
+
+    def test_no_note_when_generation_differs(self):
+        self._write_manifest("gen1")
+        self._run_stop(session_id="sessA")
+        self._write_manifest("gen2")
+
+        r = self._run_session_start(session_id="sessB")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")
+
+    def test_no_note_when_no_manifest_at_all(self):
+        self._run_stop(session_id="sessA")
+        r = self._run_session_start(session_id="sessB")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.strip(), "")
+
+
 class TestToolkitCliSmoke(TempRepo):
     def setUp(self):
         super().setUp()

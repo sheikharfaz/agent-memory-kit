@@ -4,6 +4,7 @@ Standard-library unittest only -- run with:
   python3 -m unittest discover -s tests -v
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -165,6 +166,49 @@ class TestPruneAndStats(TempRoot):
         s = mem.stats(self.root)
         self.assertEqual(s["entries"], 0)
         self.assertIsNone(s["oldest"])
+
+
+class TestMapGeneration(TempRoot):
+    def _write_manifest(self, generation):
+        d = os.path.join(self.root, ".agent", "memory", "graph")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "manifest.json"), "w", encoding="utf-8") as fh:
+            json.dump({"generation": generation}, fh)
+
+    def test_current_map_generation_none_when_no_manifest(self):
+        self.assertIsNone(mem.current_map_generation(self.root))
+
+    def test_current_map_generation_reads_manifest(self):
+        self._write_manifest("abc123")
+        self.assertEqual(mem.current_map_generation(self.root), "abc123")
+
+    def test_current_map_generation_none_on_corrupt_manifest(self):
+        d = os.path.join(self.root, ".agent", "memory", "graph")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "manifest.json"), "w", encoding="utf-8") as fh:
+            fh.write("not json")
+        self.assertIsNone(mem.current_map_generation(self.root))
+
+    def test_record_then_read_map_generation_state(self):
+        mem.record_map_generation(self.root, "gen1", "sess-abc")
+        state = mem.map_generation_state(self.root)
+        self.assertEqual(state["generation"], "gen1")
+        self.assertEqual(state["session_id"], "sess-abc")
+        self.assertIn("ts", state)
+
+    def test_record_map_generation_overwrites_not_appends(self):
+        mem.record_map_generation(self.root, "gen1", "sess-a")
+        mem.record_map_generation(self.root, "gen2", "sess-b")
+        state = mem.map_generation_state(self.root)
+        self.assertEqual(state["generation"], "gen2")
+        self.assertEqual(state["session_id"], "sess-b")
+
+    def test_record_map_generation_noop_on_falsy_generation(self):
+        mem.record_map_generation(self.root, None, "sess-a")
+        self.assertIsNone(mem.map_generation_state(self.root))
+
+    def test_map_generation_state_none_when_never_recorded(self):
+        self.assertIsNone(mem.map_generation_state(self.root))
 
 
 if __name__ == "__main__":

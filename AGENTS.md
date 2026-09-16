@@ -59,7 +59,11 @@ A one-time local index gives you the repo's shape without reading it.
      (say you are doing it; it takes seconds to minutes and writes only under
      `.agent/memory/`).
 2. Read `.agent/memory/CODEBASE_MAP.md`. Always. It is ~1–2k tokens and it
-   replaces your first ten exploratory greps.
+   replaces your first ten exploratory greps. If `session-memory` is also
+   installed, a `SessionStart` note may tell you the map's generation hasn't
+   changed since the last session read it — that is a time-saving option,
+   not a substitute for this rule; skip the re-read only when you trust it,
+   and read it anyway whenever you need specifics.
 3. Read `.agent/memory/NOTES.md` if it exists.
 4. Only then start work.
 
@@ -326,8 +330,17 @@ it. Not wired in? Use it by hand:
 This is lexical similarity, not a trained semantic model. A recalled entry
 means "something was said," not "this is true of the codebase" — it is a
 lead, cross-check it the way you would any `NOTES.md` entry tagged
-`[stated]` rather than `[verified]`. Full detail, privacy notes, and
-troubleshooting: `.agent/skills/session-memory/SKILL.md`.
+`[stated]` rather than `[verified]`.
+
+**Map freshness cache.** If `codebase-memory` is also installed, the `Stop`
+hook stamps the map's `generation` at session end to
+`.agent/memory/session/map_state.json`. The next `SessionStart` compares that
+stamp to the map's current `generation` and, only on an exact match, adds a
+note that nothing has changed since it was last read. See §2 point 2 — the
+note is an opt-in shortcut, never a reason to skip the map on its own.
+
+Full detail, privacy notes, and troubleshooting:
+`.agent/skills/session-memory/SKILL.md`.
 
 ## 14. Tool provisioning — propose-only, opt-in
 

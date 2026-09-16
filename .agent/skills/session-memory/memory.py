@@ -37,6 +37,8 @@ from collections import Counter
 SCHEMA = 1
 MEMORY_SUBDIR = os.path.join(".agent", "memory", "session")
 ENTRIES_FILE = "entries.jsonl"
+MAP_STATE_FILE = "map_state.json"
+MANIFEST_REL = os.path.join(".agent", "memory", "graph", "manifest.json")
 MAX_TEXT_CHARS = 4000
 DEFAULT_KEEP_LAST = 4000
 DEFAULT_RECALL_LIMIT = 5
@@ -80,6 +82,55 @@ def memory_dir(root):
 
 def entries_path(root):
     return os.path.join(memory_dir(root), ENTRIES_FILE)
+
+
+def map_state_path(root):
+    return os.path.join(memory_dir(root), MAP_STATE_FILE)
+
+
+def current_map_generation(root):
+    """The generation hash codebase-memory just built, straight from its
+    manifest -- cheap (a few hundred bytes), unlike reading CODEBASE_MAP.md
+    itself. None if codebase-memory isn't installed or hasn't been built
+    here yet."""
+    path = os.path.join(root, MANIFEST_REL)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh).get("generation")
+    except Exception:
+        return None
+
+
+def record_map_generation(root, generation, session_id):
+    """Stamps 'this session's end saw the map at generation X' -- current
+    state, not a log, so this overwrites rather than appends. Called from
+    the Stop hook: by the time a session ends, AGENTS.md's own protocol
+    already required it to have read the map at whatever generation was
+    current, so this is a record of that, not a new claim."""
+    if not generation:
+        return
+    d = memory_dir(root)
+    os.makedirs(d, exist_ok=True)
+    entry = {"generation": generation, "session_id": session_id or "unknown",
+              "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    path = map_state_path(root)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(entry, fh, sort_keys=True)
+    os.replace(tmp, path)
+
+
+def map_generation_state(root):
+    path = map_state_path(root)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:
+        return None
 
 
 def redact(text):

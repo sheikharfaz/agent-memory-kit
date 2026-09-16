@@ -203,6 +203,31 @@ baseline is capped at 6 files read per question, which understates its
 true cost — these ratios are a floor, not a ceiling), and raw JSON output:
 [`benchmarks/README.md`](benchmarks/README.md).
 
+### Case study: the same project, built twice
+
+The benchmark above measures *reading* an existing repo. This measures
+*building* one, session by session, real commits included — a small URL
+shortener service (routes, storage, rate limiting, validation, tests),
+built as two separate public repos from the same feature list:
+
+- [`linkshrink-baseline`](https://github.com/sheikharfaz/linkshrink-baseline)
+  — same tasks, no kit, no PRD/TRD trail, no local index.
+- [`linkshrink-agent-memory-kit`](https://github.com/sheikharfaz/linkshrink-agent-memory-kit)
+  — this kit installed from commit one, `AGENTS.md`'s spec-first workflow
+  followed throughout.
+
+Both repos' `app/` directories are byte-for-byte identical — same code, same
+tests, same outcome. What differs is what it cost to get there, tracked
+honestly in each repo's own `SESSION_LOG.md` as the work happened, not
+reconstructed after the fact: **≈1,430 tokens kit-assisted versus ≈1,993
+without it — 28% lower** — spent re-establishing context across four
+sessions of real, incremental feature work. Not the "half" this kit's own
+benchmarks show on a larger codebase (see Proof, above) — a project this
+small has little map to save on — and both `SESSION_LOG.md` files say so
+plainly, with a per-repo, line-by-line accounting of why, and a side-by-side
+[`COMPARISON.md`](https://github.com/sheikharfaz/linkshrink-agent-memory-kit/blob/main/COMPARISON.md)
+committed to both.
+
 ---
 
 ## Quick start
@@ -318,6 +343,14 @@ never enough to override actual topical similarity. Every write passes
 through a best-effort secret redaction pass first, entries are capped and
 auto-pruned, and `AGENT_MEMORY_KIT_DISABLE_SESSION_MEMORY=1` is a
 one-variable org-wide kill switch if a compliance policy requires one.
+
+When both skills are installed, `session-memory` also layers a small
+freshness cache on top of `codebase-memory`: it stamps the map's generation
+at the end of every session, and if the next session's map hasn't changed,
+it says so instead of staying silent — an optional skip, offered only when
+there's real evidence nothing moved, never a reason on its own to trust a
+stale map. `AGENTS.md`'s "read the map every session" default is unaffected
+for anyone who ignores the note.
 Detail:
 [`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md).
 

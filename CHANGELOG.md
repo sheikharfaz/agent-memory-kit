@@ -7,7 +7,19 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-16
+
 ### Added
+- `session-memory`: a map-freshness cache, opt-in on top of `codebase-memory`.
+  `hooks/stop.py` stamps the map's `generation` at session end to
+  `.agent/memory/session/map_state.json`; `hooks/session_start.py` compares
+  that stamp to the map's current generation and, only on an exact match,
+  notes that nothing has changed since a given session last read it. Any
+  mismatch or missing stamp and it says nothing -- the "read the map every
+  session" rule (`AGENTS.md` §2) is the unaffected default; this only ever
+  offers a time-saving skip when there is real evidence nothing moved.
+  Pure opt-in layering: no change to `codebase-memory` itself, and a repo
+  without `session-memory` installed sees nothing new.
 - `benchmarks/`: a reproducible token comparison (`token_comparison.py`)
   measuring how many tokens an agent spends answering four "getting
   oriented" questions against a real repo, with `codebase-memory` versus a

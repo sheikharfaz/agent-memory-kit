@@ -29,12 +29,32 @@ this runs without you invoking anything:
 
 | Hook | When | Does |
 |---|---|---|
-| `hooks/session_start.py` | Session starts/resumes | Surfaces the latest entry from each other session as additional context |
+| `hooks/session_start.py` | Session starts/resumes | Surfaces the latest entry from each other session as additional context; if `codebase-memory` is installed and its map is unchanged since the last session's end, adds a note saying so |
 | `hooks/user_prompt_submit.py` | Every prompt, before you see it | Records the prompt; recalls lexically similar entries from other sessions and injects them as additional context |
-| `hooks/stop.py` | After each response | Records the assistant's final text as a "turn" entry; prunes periodically |
+| `hooks/stop.py` | After each response | Records the assistant's final text as a "turn" entry; prunes periodically; stamps the codebase-memory map `generation` current at session end |
 
 All three fail open: any error, missing file, or unreadable transcript means
 the hook emits nothing and exits 0. They never block a session.
+
+## Map freshness cache (opt-in layering on top of codebase-memory)
+
+Reading `CODEBASE_MAP.md` every session (AGENTS.md §2) is the default and
+stays the default. This adds one thing on top: when `codebase-memory` is
+also installed, `stop.py` writes the map's current `generation` (read
+straight from `.agent/memory/graph/manifest.json`, not the rendered map
+itself) to `.agent/memory/session/map_state.json`, along with the session id
+and a timestamp — overwritten each time, not appended, since only the latest
+matters. The next `session_start.py` compares that stamp to the map's
+current generation. Only on an exact match does it add a note that the map
+hasn't changed since a given session last read it. Any mismatch, or no prior
+stamp, and it says nothing — silent fallback to the normal rule.
+
+This never touches `codebase-memory` itself and needs no change to a repo
+that only has `codebase-memory` installed; it is pure opt-in value from
+having both skills present. It also cannot go stale in a way that misleads:
+the note only ever *permits* skipping a read, it never claims the map is
+current when the generations don't match, and the underlying rule ("read the
+map, always") is unaffected for anyone who ignores the note entirely.
 
 Without the hooks wired up, you can still use this by hand -- see Commands
 below. In that case, run `recall` yourself at the start of a task the way you

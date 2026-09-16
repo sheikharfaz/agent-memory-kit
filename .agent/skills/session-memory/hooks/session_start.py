@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 session-memory :: SessionStart hook.
-Fires when a Claude Code session starts (or resumes/clears). Two jobs:
+Fires when a Claude Code session starts (or resumes/clears). Three jobs:
   1. Surfaces the most recent entry from each *other* session recorded in
      this repo, so a fresh session opens already knowing what the last one
      was doing -- the mechanism that lets you close a session and pick the
@@ -12,6 +12,12 @@ Fires when a Claude Code session starts (or resumes/clears). Two jobs:
      the "new-hire week one" entry point: asked once, at first contact,
      stored per-project, never asked again once answered. Silent no-op if
      dev-recap isn't installed, or a profile already exists.
+  3. If codebase-memory is installed and its map hasn't changed since the
+     last session ended (map_state.json, stamped by the Stop hook), says so
+     -- an optional skip, never a directive, and silent whenever state is
+     missing or the generations differ. AGENTS.md's own "read the map every
+     session" rule stays the default; this only fires when there is real
+     evidence nothing moved.
 
 Wire-up (.claude/settings.json):
   "SessionStart": [{"hooks": [{"type": "command",
@@ -50,6 +56,22 @@ def _familiarity_nudge(root):
     )
 
 
+def _map_freshness_note(root):
+    current = mem.current_map_generation(root)
+    if not current:
+        return None
+    state = mem.map_generation_state(root)
+    if not state or state.get("generation") != current:
+        return None
+    return (
+        "CODEBASE_MAP.md is unchanged since generation %s, last confirmed "
+        "at the end of session %s (%s). You may skip re-reading it this "
+        "session unless you need specifics from it -- if in doubt, read it "
+        "anyway; this is a time-saving option, not a rule." % (
+            current[:12], state.get("session_id", "unknown")[:8],
+            state.get("ts", "unknown")))
+
+
 def run():
     if session_memory_disabled():
         return
@@ -76,6 +98,10 @@ def run():
     nudge = _familiarity_nudge(root)
     if nudge:
         blocks.append(nudge)
+
+    freshness = _map_freshness_note(root)
+    if freshness:
+        blocks.append(freshness)
 
     if blocks:
         emit("\n\n".join(blocks), "SessionStart")
