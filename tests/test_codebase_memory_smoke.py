@@ -108,7 +108,8 @@ class TestAgentDirIndexing(unittest.TestCase):
              "commit", "-q", "-m", "add files"], cwd=self.repo)
         r = run([sys.executable, INDEX_PY, "build"], cwd=self.repo)
         self.assertEqual(r.returncode, 0, r.stderr)
-        with open(os.path.join(self.repo, ".agent", "memory", "graph", "files.jsonl")) as fh:
+        with open(os.path.join(self.repo, ".agent", "memory", "graph", "files.jsonl"),
+                  encoding="utf-8") as fh:
             return [json.loads(l)["p"] for l in fh]
 
     def test_agent_skills_excluded_by_default_agent_work_is_not(self):
@@ -171,7 +172,8 @@ class TestMapCompactness(unittest.TestCase):
              "commit", "-q", "-m", "init"], cwd=self.repo)
         r = run([sys.executable, INDEX_PY, "build"], cwd=self.repo)
         self.assertEqual(r.returncode, 0, r.stderr)
-        with open(os.path.join(self.repo, ".agent", "memory", "CODEBASE_MAP.md")) as fh:
+        with open(os.path.join(self.repo, ".agent", "memory", "CODEBASE_MAP.md"),
+                  encoding="utf-8") as fh:
             return fh.read()
 
     def test_single_caller_symbols_are_not_listed_as_hubs(self):
@@ -311,7 +313,7 @@ class TestDrift(unittest.TestCase):
         self.build()
         self.build()  # nothing changed -- same content-addressed generation
         log_path = os.path.join(self.repo, ".agent", "memory", "history", "drift-log.jsonl")
-        with open(log_path) as fh:
+        with open(log_path, encoding="utf-8") as fh:
             lines = [l for l in fh if l.strip()]
         self.assertEqual(len(lines), 1)
 
