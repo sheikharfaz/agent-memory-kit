@@ -1,11 +1,38 @@
 # Changelog
 
-Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No
-package registry exists for this kit (it's copied via `install.sh`/
-`install.ps1`/`install.py`), so "release" means a tagged commit a team can
-pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
+Format loosely follows [Keep a Changelog](https://keepachangelog.com/). A
+release is a tagged commit. Pin one with
+`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.1 amk init`,
+or point an internal mirror or golden image at the tag — see
+[SETUP.md](SETUP.md).
 
 ## [Unreleased]
+
+## [0.6.1] — 2026-09-17
+
+Launch release: no behaviour change to the installed kit beyond
+documentation.
+
+### Added
+- README "How it compares": an even-handed table against
+  codebase-memory-mcp, Serena, and Mem0, built only from facts in each
+  project's own README, including where each one beats this kit.
+- A proof strip at the top of the README; every number in it links to the
+  command that reproduces it.
+- `benchmarks/symbol_filter_audit.py`: reproduces the "349 symbols hidden
+  from Django's index" figure by running the old and current secret filters
+  over any repo.
+- A manually triggered PyPI release workflow using trusted publishing (no
+  stored token).
+
+### Fixed
+- Published claims that had drifted: symbol extraction covers 31
+  languages, not "~40"; the shipped code is ~5,000 lines, not "~1,600";
+  codebase-memory-mcp covers 162 languages, not "150+"/"158"; and the
+  benchmarks README attributed all of Django's +451 symbols to the filter
+  fix when 395 were (the rest is upstream change between clones).
+- `codebase-memory/SKILL.md` still said "no MCP server" and described the
+  secret filter in its pre-v0.5.0 terms.
 
 ## [0.6.0] — 2026-09-17
 
@@ -112,7 +139,8 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
   credential-ish words only when bound to a literal value
   (`api_key="sk-live-…"`); a name is an identifier, not a value. Benchmark
   numbers were re-run against the corrected index (django: 43,170 ->
-  43,621 symbols) and `SECURITY.md` documents the narrowed scope and the
+  43,621 symbols; 395 of that is this fix, the rest is upstream Django
+  changing between clones) and `SECURITY.md` documents the narrowed scope and the
   residual risk it accepts.
 - `VERSION` had drifted again (`0.2.0` while `v0.4.0` was tagged).
 

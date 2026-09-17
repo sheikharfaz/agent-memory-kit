@@ -283,8 +283,8 @@ map.
 Not a language server, not an AST-accurate call graph, not a semantic search
 engine. It is a fast, honest, dependency-free structural index whose limits are
 written into its own output so the agent quotes them back to you instead of
-inventing certainty. If you later want compiler-grade accuracy across 150+
-languages with sub-millisecond queries, that is what a real indexer like
+inventing certainty. If you later want AST-grade accuracy across 162
+languages from a single native binary, that is what a real indexer like
 `codebase-memory-mcp` gives you — this kit is the zero-dependency, regex-based
 version of the same idea, with an optional stdlib MCP server of its own
 (`mcp-bridge`, step 10) rather than a hosted one.

@@ -24,12 +24,17 @@ provider's pricing bills against — not model behaviour or answer quality.
 | [psf/requests](https://github.com/psf/requests) | 114 (37) | 797 | 0.13s | 1,032 | 85,220 | 1,564 | **54.5x** |
 | [django/django](https://github.com/django/django) | 6,901 (2,979) | 43,621 | 3.59s | 2,892 | 167,437 | 4,505 | **37.2x** |
 
-Django's symbol count went up by 451 in v0.5.0 — not because the extractor
-got smarter, but because a bug was removed: the secret scrubber used to
-match the bare *words* `token`, `secret`, `password`, `api_key`, and it was
-applied to symbol *names*, so `check_password` and 348 other identifiers
-were silently absent from the index. See the CHANGELOG entry; `evals/`
+Django's symbol count rose from 43,170 to 43,621 between the v0.4.0 and
+v0.5.0 runs. **395** of those definitions are a bug fix, not a smarter
+extractor: the secret scrubber used to match the bare *words* `token`,
+`secret`, `password`, `api_key`, and it was applied to symbol *names*, so
+`check_password` and 348 other distinct identifiers were silently absent
+from the index. The remaining 56 are upstream Django changing between the
+two clones — its file count moved too, 6,904 → 6,901. See the CHANGELOG entry; `evals/`
 exists so that class of silent hole gets caught by measurement next time.
+Reproduce the count with
+`python3 benchmarks/symbol_filter_audit.py --repo /tmp/django`
+(output: [`results/django_symbol_filter.txt`](results/django_symbol_filter.txt)).
 
 Raw output: [`results/requests.json`](results/requests.json) ·
 [`results/django.json`](results/django.json) ·

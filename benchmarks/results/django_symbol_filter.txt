@@ -1,0 +1,8 @@
+/tmp/django: 43837 symbol definitions
+  pre-v0.5.0 filter drops: 395 definitions, 349 distinct names
+  current filter drops:    0 definitions, 0 distinct names
+    was hidden: test_password_whitespace_not_stripped    x5
+    was hidden: return_passwords                         x5
+    was hidden: bad_then_good_password                   x4
+    was hidden: check_password                           x4
+    was hidden: test_password_verification               x3

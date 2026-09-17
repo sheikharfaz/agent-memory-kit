@@ -155,8 +155,9 @@ allow/deny decision. See `.agent/skills/tool-provisioning/SKILL.md`.
   the local Python/Node environment; `plan` always shows its work rather
   than asserting silently.
 - This document describes the design intent and is kept in sync by hand —
-  it is not a substitute for reading the ~1,600 lines of Python it describes,
-  which is short enough to read in one sitting; that's the point.
+  it is not a substitute for reading the ~5,000 lines of Python it describes
+  (stdlib only, no compiled code), which a reviewer can do in an afternoon;
+  that's the point.
 
 ## Reporting a problem
 

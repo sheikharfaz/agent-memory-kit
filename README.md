@@ -13,6 +13,7 @@
 [Requirements](#requirements) ·
 [Quick start](#quick-start) ·
 [Proof](#proof) ·
+[How it compares](#how-it-compares) ·
 [Enterprise readiness](#enterprise-readiness) ·
 [Security](SECURITY.md) ·
 [Documentation](#documentation)
@@ -45,6 +46,16 @@ uvx --from git+https://github.com/sheikharfaz/agent-memory-kit amk init
 
 Then `amk doctor` tells you whether it worked. More options in
 [Quick start](#quick-start).
+
+**Measured, not asserted** — every number here is reproducible with a
+command in this repo:
+
+| | |
+|---|---|
+| Tokens to answer four "getting oriented" questions in django/django | **167,437 → 4,505** (37x fewer) · [benchmarks](benchmarks/README.md) |
+| Recalling the right past-session note (recall@3) | **0.625 → 0.775**, with 0 queries worse · [evals](evals/README.md) |
+| Symbols missing from Django's index before our own measurement caught it | **349**, including `check_password` — fixed in v0.5.0 · [audit](benchmarks/symbol_filter_audit.py) |
+| Runtime dependencies | **0** |
 
 ## Who it's for
 
@@ -281,6 +292,39 @@ plainly, with a per-repo, line-by-line accounting of why, and a side-by-side
 committed to both.
 
 ---
+
+## How it compares
+
+There are excellent tools in this space, and some of them beat this kit at
+things it does not try to do. Every fact below comes from each project's own
+README (checked 2026-09-17).
+
+| | **agent-memory-kit** | [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) | [Serena](https://github.com/oraios/serena) | [Mem0](https://github.com/mem0ai/mem0) |
+|---|---|---|---|---|
+| **What it is** | Agent contract + local code index + cross-session memory + working-discipline skills | Code knowledge graph served over MCP | Language-server-backed code retrieval **and editing** over MCP | Memory layer for AI applications |
+| **Ships as** | ~5,000 lines of stdlib Python, copied into your repo | Native binary (C) | Python tool installed with `uv`, plus language servers | Python library, or a managed platform |
+| **Code parsing** | Regex patterns, 31 languages | tree-sitter, 162 languages (LSP type resolution for some) | Language servers, 40+ languages | Not a code index |
+| **Runs without an LLM or API key** | Yes | Yes | Tools run locally; your agent's model drives them | No — needs an LLM (OpenAI by default) |
+| **Edits code for the agent** | No | Not in its feature list | Yes, at symbol level | Not applicable |
+| **Published evaluation** | Token cost and recall quality, both reproducible in-repo | arXiv preprint: 83% answer quality, 10x fewer tokens over 31 repos | Agent-run evaluation on ~20 routine coding tasks | LoCoMo 92.5, LongMemEval 94.4 (managed platform) |
+
+**Pick codebase-memory-mcp** for the most accurate code graph, if you can
+run a downloaded binary. **Pick Serena** if you want your agent to navigate
+and *edit* with language-server precision. **Pick Mem0** if you are building
+an application that needs user and conversation memory.
+
+**Pick agent-memory-kit** if:
+
+- you can't install binaries, services, or language servers — a locked-down
+  work laptop, no admin rights, no exception process;
+- you want your agent's *behaviour* disciplined — evidence for every claim,
+  a spec before code, no installs without a yes, a recap you can understand
+  — not only its retrieval;
+- you want memory across sessions with no LLM call, no vector store, and no
+  network.
+
+They also compose: nothing stops you running codebase-memory-mcp for the
+graph and this kit for the contract, the memory, and the guardrails.
 
 ## Quick start
 
@@ -594,7 +638,8 @@ six skills' worth of contract. It defines:
 
 ## Accuracy contract
 
-Symbols come from language-aware pattern matching across ~40 languages, not from
+Symbols come from language-aware pattern matching across 31 languages (49 file
+types are recognised; the rest are indexed as files without symbols), not from
 a compiler front end or a language server. This is a deliberate trade: zero
 dependencies and a 2-second build, in exchange for imperfect recall. The limits
 are written into the generated output itself, so the agent quotes them back at
@@ -685,14 +730,13 @@ already expect.
 ## What this is not
 
 `codebase-memory` is not a language server, not an AST-accurate call graph,
-not semantic search. If you want compiler-grade accuracy across 158 languages
-with sub-millisecond queries and a proper knowledge graph, use
+not semantic search. If you want tree-sitter accuracy across 162 languages
+and a proper knowledge graph from a single native binary, use
 [codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp), which is
 where several ideas here came from — the tiered agent profiles, the coverage-vs-
 completeness distinction, and the layered ignore model. This kit is the
-zero-dependency, regex-based version of the same idea, for people who want a
-markdown-and-scripts approach they can read in one sitting and audit in ten
-minutes — including its own optional MCP server (`mcp-bridge`), a stdlib
+zero-dependency, regex-based version of the same idea, for people who want
+readable Python source they can audit — about 5,000 lines, no binary — including its own optional MCP server (`mcp-bridge`), a stdlib
 stdio process this kit starts itself rather than a hosted one.
 
 `session-memory` is not semantic search either — its BM25 recall matches

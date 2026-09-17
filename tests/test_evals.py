@@ -118,5 +118,21 @@ class TestCustomDataset(unittest.TestCase):
             os.unlink(path)
 
 
+class TestSymbolFilterAudit(unittest.TestCase):
+    def test_reports_what_the_old_filter_hid_and_the_new_one_keeps(self):
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "auth.py"), "w", encoding="utf-8") as fh:
+                fh.write("def check_password(raw):\n    pass\n\n"
+                         "class TokenStore:\n    pass\n\n"
+                         "def unrelated():\n    pass\n")
+            r = subprocess.run([sys.executable,
+                                os.path.join(KIT_ROOT, "benchmarks", "symbol_filter_audit.py"),
+                                "--repo", d], capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("pre-v0.5.0 filter drops: 2 definitions, 2 distinct names", r.stdout)
+        self.assertIn("current filter drops:    0 definitions", r.stdout)
+        self.assertIn("check_password", r.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

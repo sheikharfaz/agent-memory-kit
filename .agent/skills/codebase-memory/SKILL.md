@@ -7,7 +7,8 @@ description: Build and query a local knowledge graph of this repository so struc
 
 A repository index that costs one build and pays for itself on every question
 after. Entirely local: standard-library Python, no network, no daemon, no
-install, no MCP server. Reads source, writes only `.agent/memory/`.
+install, and no MCP server required (`mcp-bridge` exposes it as one if you
+want). Reads source, writes only `.agent/memory/`.
 
 ## When to use this
 
@@ -102,7 +103,9 @@ Secrets are excluded structurally, not heuristically: `.env*`, `*.pem`, `*.key`,
 keystores, `*.tfstate`, `kubeconfig*`, and anything matching `*secret*` or
 `*credential*` are never opened. The indexer writes paths, symbol names, and
 one-line signatures — never file bodies — and drops any extracted string that
-looks like a credential.
+looks like a credential *value* (a key shape, or a credential word bound to a
+literal). A symbol merely *named* after a credential — `check_password` — is
+kept, because hiding it would make the index lie about auth code.
 
 ## What the artifacts are
 
@@ -127,7 +130,7 @@ clean diffs and lets a team share one map. Gitignoring it is equally fine.
 
 ## Accuracy contract — read this before trusting a result
 
-Symbols come from language-aware pattern matching over ~40 languages, not from a
+Symbols come from language-aware pattern matching over 31 languages, not from a
 compiler front end or a language server. Consequences you must respect:
 
 * **Present means present.** A recorded symbol at `path:line` is real. Cite it.
