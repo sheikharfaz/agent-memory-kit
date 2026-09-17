@@ -67,7 +67,7 @@ jobs:
           if [ -d amkenv/Scripts ]; then BIN=amkenv/Scripts; else BIN=amkenv/bin; fi
           echo "BIN=$PWD/$BIN" >> "$GITHUB_ENV"
           "$BIN/python" -m pip install --quiet dist/*.whl
-          "$BIN/python" -c "import importlib.metadata as m; r = m.requires('agent-memory-kit'); assert not r, r; print('runtime deps: none')"
+          "$BIN/python" -c "import importlib.metadata as m; r = m.requires('agent-memory-kit-cli'); assert not r, r; print('runtime deps: none')"
       - name: amk init / doctor / find on a fresh project
         run: |
           git config --global user.email "ci@example.com"
@@ -76,6 +76,7 @@ jobs:
           mkdir src && printf 'def refreshUserAuthToken(s):\n    return s\n' > src/auth.py
           git add -A && git commit -q -m init
           "$BIN/amk" version
+          "$BIN/agent-memory-kit-cli" version
           "$BIN/amk" init --hooks --mcp
           "$BIN/amk" doctor
           "$BIN/amk" find user auth token | tee find.txt

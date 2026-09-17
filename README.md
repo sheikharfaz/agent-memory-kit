@@ -3,7 +3,7 @@
 **Give your AI coding assistant a memory, a spine, and good manners.**
 
 [![CI](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/sheikharfaz/agent-memory-kit/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](https://github.com/sheikharfaz/agent-memory-kit/blob/main/LICENSE)
 ![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)
 ![Network calls: none by default](https://img.shields.io/badge/network%20calls-none%20by%20default-brightgreen)
 ![MCP: supported](https://img.shields.io/badge/MCP-supported-blue)
@@ -15,7 +15,7 @@
 [Proof](#proof) ·
 [How it compares](#how-it-compares) ·
 [Enterprise readiness](#enterprise-readiness) ·
-[Security](SECURITY.md) ·
+[Security](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SECURITY.md) ·
 [Documentation](#documentation)
 
 ## What is this, in plain English?
@@ -52,9 +52,9 @@ command in this repo:
 
 | | |
 |---|---|
-| Tokens to answer four "getting oriented" questions in django/django | **167,437 → 4,505** (37x fewer) · [benchmarks](benchmarks/README.md) |
-| Recalling the right past-session note (recall@3) | **0.625 → 0.775**, with 0 queries worse · [evals](evals/README.md) |
-| Symbols missing from Django's index before our own measurement caught it | **349**, including `check_password` — fixed in v0.5.0 · [audit](benchmarks/symbol_filter_audit.py) |
+| Tokens to answer four "getting oriented" questions in django/django | **167,437 → 4,505** (37x fewer) · [benchmarks](https://github.com/sheikharfaz/agent-memory-kit/blob/main/benchmarks/README.md) |
+| Recalling the right past-session note (recall@3) | **0.625 → 0.775**, with 0 queries worse · [evals](https://github.com/sheikharfaz/agent-memory-kit/blob/main/evals/README.md) |
+| Symbols missing from Django's index before our own measurement caught it | **349**, including `check_password` — fixed in v0.5.0 · [audit](https://github.com/sheikharfaz/agent-memory-kit/blob/main/benchmarks/symbol_filter_audit.py) |
 | Runtime dependencies | **0** |
 
 ## Who it's for
@@ -75,7 +75,7 @@ command in this repo:
   its own.
 - **Anyone asking "is it actually safe to let AI write code here"** — this
   kit is built to answer that question honestly; see
-  [SECURITY.md](SECURITY.md) for the full, plain-language case.
+  [SECURITY.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SECURITY.md) for the full, plain-language case.
 
 ## Requirements
 
@@ -121,7 +121,7 @@ permission.** That shapes everything else about it.
   only network calls this kit ever makes are an install command you
   explicitly approve, a connectivity check that fetches nothing, and one
   explicit org-policy sync command — see
-  [SECURITY.md](SECURITY.md#components-and-their-networkwrite-surface)
+  [SECURITY.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SECURITY.md#components-and-their-networkwrite-surface)
   for the exact list, per skill.
 - **An audit trail when you need one.** Every tool install/uninstall is
   logged locally to an append-only ledger with a best-effort software bill
@@ -130,7 +130,7 @@ permission.** That shapes everything else about it.
   security team can drop a single read-only policy file that allowlists or
   denylists specific tools, or routes installs through an internal package
   mirror — and no individual project can override that policy.
-- **A one-sitting security review.** [SECURITY.md](SECURITY.md) is short
+- **A one-sitting security review.** [SECURITY.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SECURITY.md) is short
   enough to read end to end in about ten minutes: exactly what's read,
   what's written, and what (if anything) ever leaves the machine.
 
@@ -164,7 +164,7 @@ service — and it's opt-in, like the other three: the rest of the kit works
 exactly the same with or without it installed.
 
 See [Enterprise readiness](#enterprise-readiness) above and
-[SECURITY.md](SECURITY.md) for the full threat model.
+[SECURITY.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SECURITY.md) for the full threat model.
 
 ---
 
@@ -231,7 +231,7 @@ No LLM calls, nothing hidden — full methodology, the exact grep-and-read
 naive baseline it's measured against, honest limitations (the naive
 baseline is capped at 6 files read per question, which understates its
 true cost — these ratios are a floor, not a ceiling), and raw JSON output:
-[`benchmarks/README.md`](benchmarks/README.md).
+[`benchmarks/README.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/benchmarks/README.md).
 
 ### Cheap is the easy half. Is it *correct*?
 
@@ -264,7 +264,7 @@ the end of the zero-dependency property this kit exists for. That trade is
 refused on purpose, and the table is how you hold us to saying so.
 
 Methodology, the authoring-bias disclosure, and why these numbers are **not**
-comparable to LongMemEval or LOCOMO scores: [`evals/README.md`](evals/README.md).
+comparable to LongMemEval or LOCOMO scores: [`evals/README.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/evals/README.md).
 
 ### Case study: the same project, built twice
 
@@ -374,6 +374,10 @@ agent-memory-kit doctor  ·  /home/you/project
 The `amk` package itself has no runtime dependencies. Installing from git
 fetches one build-time tool (`hatchling`) from your package index, once.
 
+**On PyPI this is `agent-memory-kit-cli`.** A package called
+`agent-memory-kit` also exists on PyPI, but it is an unrelated project by
+another author — don't install it expecting this one.
+
 ### No outbound GitHub or pip? Clone and copy
 
 Everything `amk init` does is also a plain file copy you can run from a
@@ -391,7 +395,7 @@ image whose execution policy is `Restricted` — common, and not something a
 non-admin can change — use `install.py`; it needs no script-execution policy.
 
 Or copy by hand; the complete list is `FILES` at the top of
-[`install.py`](install.py). The core is `AGENTS.md`, `.agent/lib/`, and
+[`install.py`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/install.py). The core is `AGENTS.md`, `.agent/lib/`, and
 `.agent/skills/codebase-memory/`; every other skill directory is optional.
 Then add to `.gitignore`:
 
@@ -483,7 +487,7 @@ there's real evidence nothing moved, never a reason on its own to trust a
 stale map. `AGENTS.md`'s "read the map every session" default is unaffected
 for anyone who ignores the note.
 Detail:
-[`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md).
+[`.agent/skills/session-memory/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/session-memory/SKILL.md).
 
 ## tool-provisioning — propose-only tool access
 
@@ -514,7 +518,7 @@ developer-run command that pulls it from a URL. `doctor` is a read-only
 preflight — is PyPI/npm/your mirror actually reachable from here, what CLIs
 exist, what proxy env vars are set — so a developer on a locked-down network
 self-diagnoses in seconds instead of opening an IT ticket. Detail:
-[`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md).
+[`.agent/skills/tool-provisioning/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/tool-provisioning/SKILL.md).
 
 ## spec-first — PRD/TRD instead of vibe coding
 
@@ -544,7 +548,7 @@ python .agent/skills/spec-first/spec_first.py list                  # what's in 
 The script only scaffolds structure and checks it's filled in — writing the
 actual requirements and design is real thinking, the same way `research.md`
 and `progress.md` always required real work, not a form. Detail:
-[`.agent/skills/spec-first/SKILL.md`](.agent/skills/spec-first/SKILL.md).
+[`.agent/skills/spec-first/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/spec-first/SKILL.md).
 
 ## dev-recap — closing recap and optional quiz
 
@@ -581,7 +585,7 @@ here reports results to a manager, a dashboard, or CI** — see the SKILL.md
 if you're tempted to wire it into something that would. `gaps` is a lead
 generator with the same accuracy contract as `codebase-memory`'s `orphans`:
 a clean result means the heuristic found nothing, never that nothing is
-missing. Detail: [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md).
+missing. Detail: [`.agent/skills/dev-recap/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/dev-recap/SKILL.md).
 
 ## mcp-bridge — live tools for hosts that aren't Claude Code
 
@@ -605,7 +609,7 @@ tools write anything (`codebase_build`, into `.agent/memory/graph/` only;
 kit's propose-only safety posture intact for hosts with no approval step
 of their own. `install.py|.sh|.ps1 --wire-mcp` registers it in your
 project's `.mcp.json` automatically. Detail, full tool list, and what's
-excluded and why: [`.agent/skills/mcp-bridge/SKILL.md`](.agent/skills/mcp-bridge/SKILL.md).
+excluded and why: [`.agent/skills/mcp-bridge/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/mcp-bridge/SKILL.md).
 
 ---
 
@@ -777,7 +781,7 @@ across Python 3.8 and 3.12 on every push and PR.
 
 ## For security/procurement reviewers
 
-See [SECURITY.md](SECURITY.md) for the full threat model, data-flow table,
+See [SECURITY.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SECURITY.md) for the full threat model, data-flow table,
 and what's explicitly out of scope. Short version: no telemetry, no network
 calls except a command you approve, nothing written outside `.agent/memory/`
 and `.agent/work/`, zero third-party dependencies.
@@ -786,12 +790,12 @@ and `.agent/work/`, zero third-party dependencies.
 
 | Start here | Go deeper |
 |---|---|
-| [AGENTS.md](AGENTS.md) — the operating contract | [SETUP.md](SETUP.md) — full install/wiring walkthrough |
-| [SECURITY.md](SECURITY.md) — threat model & data flow | [CHANGELOG.md](CHANGELOG.md) — version history |
-| [`.agent/skills/codebase-memory/SKILL.md`](.agent/skills/codebase-memory/SKILL.md) | [`.agent/skills/session-memory/SKILL.md`](.agent/skills/session-memory/SKILL.md) |
-| [`.agent/skills/tool-provisioning/SKILL.md`](.agent/skills/tool-provisioning/SKILL.md) | [`.agent/skills/spec-first/SKILL.md`](.agent/skills/spec-first/SKILL.md) |
-| [`.agent/skills/dev-recap/SKILL.md`](.agent/skills/dev-recap/SKILL.md) | [`.agent/skills/mcp-bridge/SKILL.md`](.agent/skills/mcp-bridge/SKILL.md) |
-| [`benchmarks/README.md`](benchmarks/README.md) — what it costs | [`evals/README.md`](evals/README.md) — whether it's correct |
+| [AGENTS.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/AGENTS.md) — the operating contract | [SETUP.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SETUP.md) — full install/wiring walkthrough |
+| [SECURITY.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/SECURITY.md) — threat model & data flow | [CHANGELOG.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/CHANGELOG.md) — version history |
+| [`.agent/skills/codebase-memory/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/codebase-memory/SKILL.md) | [`.agent/skills/session-memory/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/session-memory/SKILL.md) |
+| [`.agent/skills/tool-provisioning/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/tool-provisioning/SKILL.md) | [`.agent/skills/spec-first/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/spec-first/SKILL.md) |
+| [`.agent/skills/dev-recap/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/dev-recap/SKILL.md) | [`.agent/skills/mcp-bridge/SKILL.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/.agent/skills/mcp-bridge/SKILL.md) |
+| [`benchmarks/README.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/benchmarks/README.md) — what it costs | [`evals/README.md`](https://github.com/sheikharfaz/agent-memory-kit/blob/main/evals/README.md) — whether it's correct |
 | `tests/` — the test suite is also readable documentation of expected behaviour | |
 
 ## Contributing
@@ -802,8 +806,8 @@ dataset was written by the maintainers, which is its biggest weakness, and
 the *Retrieval miss* issue template collects exactly what `evals/` needs.
 After that: symbol patterns for under-served languages, and
 `tool-provisioning` registry entries. The constraints every change has to
-respect, and a PR checklist, are in [CONTRIBUTING.md](CONTRIBUTING.md).
+respect, and a PR checklist, are in [CONTRIBUTING.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/CONTRIBUTING.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Version history: [CHANGELOG.md](CHANGELOG.md).
+MIT. See [LICENSE](https://github.com/sheikharfaz/agent-memory-kit/blob/main/LICENSE). Version history: [CHANGELOG.md](https://github.com/sheikharfaz/agent-memory-kit/blob/main/CHANGELOG.md).

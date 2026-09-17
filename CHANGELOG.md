@@ -8,6 +8,18 @@ or point an internal mirror or golden image at the tag — see
 
 ## [Unreleased]
 
+## [0.6.2] — 2026-09-17
+
+### Changed
+- The Python distribution is now **`agent-memory-kit-cli`**. The name
+  `agent-memory-kit` on PyPI belongs to an unrelated project by another
+  author; installing it will not give you this kit. The repo, the product,
+  the `amk` command and the MCP server keep the `agent-memory-kit` name.
+  The package also installs an `agent-memory-kit-cli` command (identical to
+  `amk`), so `uvx agent-memory-kit-cli init` works once it is on PyPI.
+- README file links are absolute, so they still work when PyPI renders the
+  README; `twine check` passes on both the sdist and the wheel.
+
 ## [0.6.1] — 2026-09-17
 
 Launch release: no behaviour change to the installed kit beyond

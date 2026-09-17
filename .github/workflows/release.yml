@@ -2,8 +2,9 @@ name: Release to PyPI
 
 # Manual on purpose: publishing is public and irreversible (PyPI never lets a
 # version number be reused). Uses PyPI trusted publishing -- no API token is
-# stored in this repo. One-time setup on pypi.org: add a trusted publisher
-# for this repository, workflow `release.yml`, environment `pypi`.
+# stored in this repo. One-time setup on pypi.org: add a "pending" trusted
+# publisher for project `agent-memory-kit-cli`, owner `sheikharfaz`, repo
+# `agent-memory-kit`, workflow `release.yml`, environment `pypi`.
 
 on:
   workflow_dispatch:

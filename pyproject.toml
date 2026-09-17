@@ -3,7 +3,10 @@ requires = ["hatchling>=1.18"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agent-memory-kit"
+# `agent-memory-kit` on PyPI is an unrelated project by another author, so
+# this distribution is `agent-memory-kit-cli`. The product, the repo, the
+# `amk` command and the MCP server name all stay `agent-memory-kit`.
+name = "agent-memory-kit-cli"
 dynamic = ["version"]
 description = "Local memory, a codebase index, and working discipline for AI coding agents. Zero dependencies, no network."
 readme = "README.md"
@@ -26,6 +29,9 @@ dependencies = []
 
 [project.scripts]
 amk = "agent_memory_kit.cli:entry"
+# Same entry point under the distribution's own name, so
+# `uvx agent-memory-kit-cli init` works without `--from`.
+agent-memory-kit-cli = "agent_memory_kit.cli:entry"
 
 [project.urls]
 Homepage = "https://github.com/sheikharfaz/agent-memory-kit"
