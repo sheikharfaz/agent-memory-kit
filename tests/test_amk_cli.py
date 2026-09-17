@@ -199,5 +199,53 @@ class TestVersion(unittest.TestCase):
         self.assertIn("init", r.stdout)
 
 
+class TestCommandPrefix(unittest.TestCase):
+    """Under `uvx` the `amk` command vanishes when the process exits, so the
+    printed next steps must say `uvx agent-memory-kit-cli ...` there."""
+
+    def setUp(self):
+        import agent_memory_kit.cli as cli
+        self.cli = cli
+        self._exe = sys.executable
+        self._uv = os.environ.get("UV")
+
+    def tearDown(self):
+        sys.executable = self._exe
+        if self._uv is None:
+            os.environ.pop("UV", None)
+        else:
+            os.environ["UV"] = self._uv
+
+    def test_uvx_ephemeral_env_gets_the_uvx_prefix(self):
+        os.environ["UV"] = "/usr/local/bin/uv"
+        sys.executable = "/home/u/.cache/uv/archive-v0/AbC123/bin/python"
+        self.assertEqual(self.cli.command_prefix(), "uvx agent-memory-kit-cli")
+
+    def test_windows_uvx_path_is_recognised(self):
+        os.environ["UV"] = r"C:\uv\uv.exe"
+        sys.executable = r"C:\Users\u\AppData\Local\uv\cache\archive-v0\x\Scripts\python.exe"
+        self.assertEqual(self.cli.command_prefix(), "uvx agent-memory-kit-cli")
+
+    def test_persistent_install_gets_amk(self):
+        os.environ.pop("UV", None)
+        sys.executable = "/home/u/.local/pipx/venvs/agent-memory-kit-cli/bin/python"
+        self.assertEqual(self.cli.command_prefix(), "amk")
+
+    def test_uv_tool_install_is_persistent_so_gets_amk(self):
+        os.environ["UV"] = "/usr/local/bin/uv"
+        sys.executable = "/home/u/.local/share/uv/tools/agent-memory-kit-cli/bin/python"
+        self.assertEqual(self.cli.command_prefix(), "amk")
+
+    def test_init_output_uses_the_prefix(self):
+        with tempfile.TemporaryDirectory() as d:
+            subprocess.run(["git", "init", "-q", d], check=True)
+            env = dict(os.environ, PYTHONPATH=KIT_ROOT)
+            env.pop("UV", None)
+            r = subprocess.run([sys.executable, "-m", "agent_memory_kit", "init", d, "--no-build"],
+                               env=env, capture_output=True, text=True, timeout=120)
+        self.assertIn("amk doctor", r.stdout)
+        self.assertNotIn("uvx agent-memory-kit-cli doctor", r.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

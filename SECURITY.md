@@ -24,7 +24,7 @@ under their own OS-level permissions.
 | `spec-first` (`spec_first.py`) | its own PRD.md/TRD.md files, `git` (none directly — reads via the agent's own tool use) | only `.agent/work/<task-slug>/` (the same directory RPI already used) | **none, ever** |
 | `mcp-bridge` (`server.py`) | whatever `codebase-memory`/`session-memory` already read, via subprocess | only what those two already write (`.agent/memory/graph/`, `CODEBASE_MAP.md`, `.agent/memory/session/`) — nothing new | **none, ever** |
 | `.agent/lib/retrieval.py` | nothing — a pure function library (tokenizer + BM25) called in-process | nothing | **none, ever** |
-| `amk` CLI (`agent_memory_kit/`) | the kit files bundled in its own package | the same files the installers copy, plus two lines appended to the project's `.gitignore` (`--no-gitignore` skips it) | **none at runtime**. Installing the package from git fetches its build tool (`hatchling`) from your package index once — the same trust decision as any `pip install` |
+| `amk` CLI (`agent_memory_kit/`) | the kit files bundled in its own package | the same files the installers copy, plus two lines appended to the project's `.gitignore` (`--no-gitignore` skips it) | **none at runtime**. Installing it (`agent-memory-kit-cli` on PyPI) is a normal package download — the same trust decision as any `pip install`; a git-URL install also fetches the `hatchling` build tool once |
 
 Nothing here phones home, collects telemetry, or uploads anything by itself.
 Every network-capable action is either a command a human explicitly

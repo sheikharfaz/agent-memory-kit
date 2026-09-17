@@ -47,7 +47,7 @@ Try it in your project — one command, nothing left installed afterwards:
 uvx agent-memory-kit-cli init
 ```
 
-Then `amk doctor` tells you whether it worked. More options in
+Then `uvx agent-memory-kit-cli doctor` tells you whether it worked. More options in
 [Quick start](#quick-start).
 
 **Measured, not asserted** — every number here is reproducible with a
@@ -347,14 +347,15 @@ amk init --hooks --mcp   # also: cross-session recall in Claude Code, live tools
 ```
 
 Straight from GitHub instead of PyPI, pinned to a release:
-`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.2 amk init`.
+`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.3 amk init`.
 
-`amk init` copies the kit into the current repo, gitignores the two private
-paths (`.agent/memory/session/`, `.agent/work/`), and builds the index. Then
-check it:
+`init` copies the kit into the current repo, gitignores the two private
+paths (`.agent/memory/session/`, `.agent/work/`), builds the index, and
+prints the exact next commands for however you installed it. Then check it
+(example output):
 
 ```console
-$ amk doctor
+$ uvx agent-memory-kit-cli doctor
 agent-memory-kit doctor  ·  /home/you/project
 
   PASS  python 3.12.4
@@ -364,10 +365,14 @@ agent-memory-kit doctor  ·  /home/you/project
   PASS  privacy              .agent/memory/session/ is gitignored
   PASS  claude code hooks    wired
   PASS  mcp server           registered in .mcp.json
-  PASS  kit version          matches amk 0.6.0
+  PASS  kit version          matches amk 0.6.3
 
 0 failure(s), 0 warning(s).
 ```
+
+With a permanent install (`pipx`/`pip`) the command is `amk`. With `uvx`,
+nothing stays installed, so write `uvx agent-memory-kit-cli` wherever this
+table says `amk`.
 
 | Command | Does |
 |---|---|
@@ -377,8 +382,9 @@ agent-memory-kit doctor  ·  /home/you/project
 | `amk query <verb> …` | Any [query verb](#query-cli) |
 | `amk mcp` | Run the MCP server over stdio |
 
-The `amk` package itself has no runtime dependencies. Installing from git
-fetches one build-time tool (`hatchling`) from your package index, once.
+The package has no runtime dependencies, and installing it from PyPI pulls
+nothing else. (Installing straight from git instead builds it locally,
+which fetches the `hatchling` build tool once.)
 
 **Mind the `-cli`.** This kit is
 [`agent-memory-kit-cli`](https://pypi.org/project/agent-memory-kit-cli/) on

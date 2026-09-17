@@ -8,6 +8,17 @@ or point an internal mirror or golden image at the tag — see
 
 ## [Unreleased]
 
+## [0.6.3] — 2026-09-17
+
+### Fixed
+- **`amk init` printed next steps that fail under `uvx`.** It always said
+  `amk doctor`, but `uvx` leaves nothing installed, so `amk` does not exist
+  once the command exits -- the first thing a new user typed after the
+  README's one-liner was "command not found". `init` now detects `uvx`'s
+  throwaway environment and prints `uvx agent-memory-kit-cli doctor` etc.,
+  plus a pointer to `pipx install` for a permanent `amk`. The README and
+  SETUP had the same mistake and are corrected.
+
 ### Changed
 - `agent-memory-kit-cli` 0.6.2 is on PyPI, so the README, SETUP and `amk
   --help` now lead with `uvx agent-memory-kit-cli init` /

@@ -9,7 +9,7 @@ itself, not a hosted service. Requires Python 3.8+ and, ideally, git.
 
 ```bash
 uvx agent-memory-kit-cli init --hooks --mcp
-uvx agent-memory-kit-cli doctor   # or `pipx install agent-memory-kit-cli`, then `amk doctor`
+uvx agent-memory-kit-cli doctor   # with `pipx install agent-memory-kit-cli`, just `amk doctor`
 ```
 
 `amk init` performs steps 1, 2, 6 and 10 below (and the `.gitignore` half

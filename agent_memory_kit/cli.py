@@ -76,6 +76,17 @@ def _run(argv, cwd=None):
     return subprocess.run(argv, cwd=cwd).returncode
 
 
+def command_prefix():
+    """How the user should invoke the next command. Under `uvx`, the package
+    lives in a throwaway environment inside uv's cache and `amk` is gone
+    the moment this process exits, so telling the user to run `amk doctor`
+    would send them straight into "command not found"."""
+    exe = sys.executable.replace("\\", "/")
+    if os.environ.get("UV") and "/archive-v" in exe:
+        return "uvx agent-memory-kit-cli"
+    return "amk"
+
+
 def _ensure_gitignore(target):
     path = os.path.join(target, ".gitignore")
     existing = ""
@@ -121,13 +132,19 @@ def cmd_init(args):
             print("amk init: index build failed (exit %d)" % rc, file=sys.stderr)
             return rc
 
-    print("\nReady. Next:")
-    print("  amk doctor                  # check the install is healthy")
-    print("  amk find <plain words>      # find a symbol without knowing its name")
+    cmd = command_prefix()
+    steps = [("doctor", "check the install is healthy"),
+             ("find <plain words>", "find a symbol without knowing its name")]
     if not args.hooks:
-        print("  amk init --hooks            # cross-session recall in Claude Code")
+        steps.append(("init --hooks", "cross-session recall in Claude Code"))
     if not args.mcp:
-        print("  amk init --mcp              # live tools in Cursor / Claude Desktop / any MCP host")
+        steps.append(("init --mcp", "live tools in Cursor / Claude Desktop / any MCP host"))
+    width = max(len("%s %s" % (cmd, verb)) for verb, _ in steps) + 2
+    print("\nReady. Next:")
+    for verb, why in steps:
+        print("  %-*s# %s" % (width, "%s %s" % (cmd, verb), why))
+    if cmd != "amk":
+        print("(`pipx install agent-memory-kit-cli` gives you a permanent `amk` instead.)")
     print("Your agent reads AGENTS.md from here on.")
     return 0
 
