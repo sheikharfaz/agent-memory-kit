@@ -8,6 +8,8 @@
 ![Network calls: none by default](https://img.shields.io/badge/network%20calls-none%20by%20default-brightgreen)
 ![MCP: supported](https://img.shields.io/badge/MCP-supported-blue)
 
+![agent-memory-kit: local memory, a codebase index, and working discipline for AI coding agents](https://raw.githubusercontent.com/sheikharfaz/agent-memory-kit/main/.github/social-preview.png)
+
 [What it does](#what-is-this-in-plain-english) ·
 [Who it's for](#who-its-for) ·
 [Requirements](#requirements) ·
