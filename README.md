@@ -7,6 +7,7 @@
 ![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)
 ![Network calls: none by default](https://img.shields.io/badge/network%20calls-none%20by%20default-brightgreen)
 ![MCP: supported](https://img.shields.io/badge/MCP-supported-blue)
+[![PyPI](https://img.shields.io/pypi/v/agent-memory-kit-cli)](https://pypi.org/project/agent-memory-kit-cli/)
 
 ![agent-memory-kit: local memory, a codebase index, and working discipline for AI coding agents](https://raw.githubusercontent.com/sheikharfaz/agent-memory-kit/main/.github/social-preview.png)
 
@@ -43,7 +44,7 @@ no data leaving your computer.
 Try it in your project — one command, nothing left installed afterwards:
 
 ```bash
-uvx --from git+https://github.com/sheikharfaz/agent-memory-kit amk init
+uvx agent-memory-kit-cli init
 ```
 
 Then `amk doctor` tells you whether it worked. More options in
@@ -86,7 +87,7 @@ command in this repo:
 | **Python 3.8 or newer** | The only hard requirement. Every script is standard-library only — nothing to `pip install` for the core kit. |
 | **git** *(recommended, not required)* | Used to honour `.gitignore` and to power diff-based features (`query.py changed`, `dev-recap`'s `gaps`). Without it, indexing still works via a plain filesystem walk — you just lose those git-aware features. |
 | **Any OS** | macOS, Linux, or Windows. On Windows, use `install.py` (or `py`/`python`) if your PowerShell execution policy blocks `.ps1` scripts — see [Quick start](#quick-start). |
-| **uv or pipx** *(optional)* | Only for the one-command install. Without them, clone the repo and run `install.py` — same files, no package manager. |
+| **uv, pipx or pip** *(optional)* | Only for the one-command install (`agent-memory-kit-cli` on PyPI). Without them, clone the repo and run `install.py` — same files, no package manager. |
 | **Claude Code** *(optional)* | Only needed for `session-memory`'s automatic hooks and the "new-hire" familiarity nudge. Everything else works by hand, or via any harness that reads `AGENTS.md` (GitHub Copilot, Cursor, Codex, Zed, …). |
 
 Nothing else. No API key, no account, no subscription, no server to stand
@@ -334,16 +335,19 @@ One command, from inside your project. Nothing is cloned, nothing is piped
 into a shell, and nothing is left installed afterwards:
 
 ```bash
-uvx --from git+https://github.com/sheikharfaz/agent-memory-kit amk init
+uvx agent-memory-kit-cli init
 ```
 
 Prefer a command that stays on your PATH?
 
 ```bash
-pipx install git+https://github.com/sheikharfaz/agent-memory-kit
+pipx install agent-memory-kit-cli      # or: pip install agent-memory-kit-cli
 amk init                 # install the kit here and build the index
 amk init --hooks --mcp   # also: cross-session recall in Claude Code, live tools for any MCP host
 ```
+
+Straight from GitHub instead of PyPI, pinned to a release:
+`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.2 amk init`.
 
 `amk init` copies the kit into the current repo, gitignores the two private
 paths (`.agent/memory/session/`, `.agent/work/`), and builds the index. Then
@@ -376,9 +380,10 @@ agent-memory-kit doctor  ·  /home/you/project
 The `amk` package itself has no runtime dependencies. Installing from git
 fetches one build-time tool (`hatchling`) from your package index, once.
 
-**On PyPI this is `agent-memory-kit-cli`.** A package called
-`agent-memory-kit` also exists on PyPI, but it is an unrelated project by
-another author — don't install it expecting this one.
+**Mind the `-cli`.** This kit is
+[`agent-memory-kit-cli`](https://pypi.org/project/agent-memory-kit-cli/) on
+PyPI. A package called `agent-memory-kit` also exists there, but it is an
+unrelated project by another author — don't install it expecting this one.
 
 ### No outbound GitHub or pip? Clone and copy
 

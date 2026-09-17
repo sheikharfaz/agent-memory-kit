@@ -8,10 +8,11 @@ amk -- the one command for agent-memory-kit.
   amk mcp [--root DIR]
   amk version
 
-Install without cloning, and without piping anything into a shell:
+Install without cloning, and without piping anything into a shell
+(PyPI name `agent-memory-kit-cli`; `agent-memory-kit` there is unrelated):
 
-  uvx --from git+https://github.com/sheikharfaz/agent-memory-kit amk init
-  pipx install git+https://github.com/sheikharfaz/agent-memory-kit
+  uvx agent-memory-kit-cli init
+  pipx install agent-memory-kit-cli
 
 Python 3.8+ standard library only at runtime. `init` copies the same file
 set the clone-based installers do -- the list lives in `install.py` and is

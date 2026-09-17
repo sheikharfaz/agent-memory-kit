@@ -8,6 +8,12 @@ or point an internal mirror or golden image at the tag — see
 
 ## [Unreleased]
 
+### Changed
+- `agent-memory-kit-cli` 0.6.2 is on PyPI, so the README, SETUP and `amk
+  --help` now lead with `uvx agent-memory-kit-cli init` /
+  `pipx install agent-memory-kit-cli`. The git-URL install stays documented
+  as the pinned-release alternative.
+
 ## [0.6.2] — 2026-09-17
 
 ### Changed
