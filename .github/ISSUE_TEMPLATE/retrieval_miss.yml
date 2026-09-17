@@ -1,0 +1,44 @@
+name: Retrieval miss
+description: session-memory or `amk find` did not surface something it should have. These become eval cases.
+labels: [eval-case]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The recall eval (`evals/`) was written by the maintainers, which is
+        its biggest weakness. Real misses are the most useful thing you can
+        send. **Remove anything confidential** before posting -- paraphrase
+        the entries if you need to, as long as the vocabulary gap survives.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Which retrieval?
+      options:
+        - session-memory recall (hooks or memory.py recall)
+        - amk find / query.py find
+    validations:
+      required: true
+  - type: textarea
+    id: query
+    attributes:
+      label: What you asked (the query)
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: The entry or symbol that should have come back
+      description: For session-memory, the recorded text. For find, the symbol name and path.
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What came back instead (paste the output)
+      render: text
+  - type: checkboxes
+    id: ok
+    attributes:
+      label: Permission
+      options:
+        - label: The text above may be added to `evals/datasets/` under the project's MIT license.

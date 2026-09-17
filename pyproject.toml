@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-memory-kit"
+dynamic = ["version"]
+description = "Local memory, a codebase index, and working discipline for AI coding agents. Zero dependencies, no network."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "sheikharfaz" }]
+keywords = ["ai", "agents", "coding-agents", "agents-md", "mcp", "memory", "codebase-index", "claude-code"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development",
+]
+# Runtime dependencies: none, on purpose. hatchling above is build-time only.
+dependencies = []
+
+[project.scripts]
+amk = "agent_memory_kit.cli:entry"
+
+[project.urls]
+Homepage = "https://github.com/sheikharfaz/agent-memory-kit"
+Documentation = "https://github.com/sheikharfaz/agent-memory-kit#readme"
+Changelog = "https://github.com/sheikharfaz/agent-memory-kit/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "VERSION"
+pattern = "^(?P<version>[^\\s]+)"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent_memory_kit"]
+
+# The kit files ship inside the wheel at their real repo paths, so `amk init`
+# copies exactly what the clone-based installers copy. Mapped, not duplicated.
+[tool.hatch.build.targets.wheel.force-include]
+"install.py" = "agent_memory_kit/payload/install.py"
+"VERSION" = "agent_memory_kit/payload/VERSION"
+"AGENTS.md" = "agent_memory_kit/payload/AGENTS.md"
+"SETUP.md" = "agent_memory_kit/payload/SETUP.md"
+"SECURITY.md" = "agent_memory_kit/payload/SECURITY.md"
+".github/copilot-instructions.md" = "agent_memory_kit/payload/.github/copilot-instructions.md"
+".agent/lib" = "agent_memory_kit/payload/.agent/lib"
+".agent/skills" = "agent_memory_kit/payload/.agent/skills"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "agent_memory_kit/",
+    ".agent/lib/",
+    ".agent/skills/",
+    ".github/copilot-instructions.md",
+    "install.py",
+    "VERSION",
+    "AGENTS.md",
+    "SETUP.md",
+    "SECURITY.md",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+]
+exclude = ["**/__pycache__", "**/*.pyc"]

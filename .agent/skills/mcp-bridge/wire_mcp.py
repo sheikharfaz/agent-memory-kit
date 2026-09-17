@@ -15,9 +15,22 @@ explicitly. Never run automatically.
 
 import json
 import os
+import shutil
 import sys
 
 SERVER_NAME = "agent-memory-kit"
+
+
+def portable_python():
+    """A bare interpreter name resolved via PATH, not an absolute path.
+    Project-scope .mcp.json is meant to be committed and shared, so one
+    developer's venv path (or an ephemeral `uvx` environment that can be
+    garbage-collected) must not end up in it. The server is stdlib-only, so
+    any 3.8+ interpreter on PATH runs it."""
+    for name in ("python3", "python"):
+        if shutil.which(name):
+            return name
+    return sys.executable
 
 
 def main():
@@ -34,7 +47,7 @@ def main():
 
     servers = config.setdefault("mcpServers", {})
     is_new = SERVER_NAME not in servers
-    command = sys.executable if is_new else servers[SERVER_NAME].get("command", sys.executable)
+    command = portable_python() if is_new else servers[SERVER_NAME].get("command", portable_python())
     servers[SERVER_NAME] = {
         "type": "stdio",
         "command": command,

@@ -45,7 +45,7 @@ sys.path.insert(0, os.path.join(SKILLS_DIR, "session-memory"))
 import memory as mem  # noqa: E402 -- reuse find_repo_root, one definition
 
 SERVER_NAME = "agent-memory-kit"
-SERVER_VERSION = "0.5.0"
+SERVER_VERSION = "0.6.0"
 PROTOCOL_VERSIONS = ("2025-06-18", "2025-03-26", "2024-11-05")
 DEFAULT_TIMEOUT = 45
 BUILD_TIMEOUT = 300

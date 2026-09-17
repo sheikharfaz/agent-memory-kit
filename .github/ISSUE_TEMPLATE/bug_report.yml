@@ -1,0 +1,35 @@
+name: Bug report
+description: Something did not work the way the docs say it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. Please paste the output of `amk doctor` -- it answers most of
+        the "which version / what is installed" questions in one go.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. amk init --hooks
+        2. amk find ...
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `amk doctor`
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: OS, Python version, and agent (Claude Code / Cursor / Copilot / other)
+    validations:
+      required: true

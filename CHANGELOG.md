@@ -7,6 +7,51 @@ pin their internal mirror or golden image to — see [SETUP.md](SETUP.md).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-09-17
+
+### Added
+- **`amk`, a one-command install and CLI.** `uvx --from
+  git+https://github.com/sheikharfaz/agent-memory-kit amk init` installs the
+  kit into the current project, gitignores the two private paths, and builds
+  the index -- no clone, no absolute paths into a checkout, and no `curl |
+  bash` (which `AGENTS.md` §8 forbids, so the kit does not ask users to do
+  it either). `pipx install git+…` gives a persistent `amk`. Commands:
+  `init` (install/upgrade, `--hooks`, `--mcp`), `doctor`, `find`, `query`,
+  `mcp`, `version`. Zero runtime dependencies; the wheel carries the kit
+  files at their real repo paths via hatchling `force-include`, so nothing
+  is duplicated in the tree, and `init` imports `install.py`'s `FILES`
+  rather than keeping its own list.
+- **`amk doctor`**: a one-screen health check -- Python, git, every kit
+  file, index built and fresh, session text gitignored, hooks and MCP wired,
+  and whether the installed files match this `amk` version. Non-zero exit on
+  any failure, so it doubles as a CI gate.
+- A CI job that builds the sdist and wheel, installs the wheel into a bare
+  venv on Ubuntu and Windows (Python 3.8 and 3.12), asserts it declares no
+  runtime dependencies, and runs `init` / `doctor` / `find` against a fresh
+  project -- the test suite covers the checkout, this covers what users get.
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, bug-report and PR templates, and
+  a *Retrieval miss* issue template that collects exactly what `evals/`
+  needs -- real misses are the fix for the eval dataset's biggest weakness,
+  which is that the maintainers wrote it.
+
+### Changed
+- `install.py` now exposes `install(src, target, ...)`; its command line and
+  output are unchanged.
+- README leads with the one-command install. The manual-copy list there,
+  which had drifted (no `.agent/lib/`, no `mcp-bridge`), now points at
+  `FILES` in `install.py` instead of repeating it.
+
+### Fixed
+- `wire_mcp.py` wrote the absolute path of whichever interpreter ran it into
+  `.mcp.json`. Project-scope `.mcp.json` is meant to be committed, so that
+  leaked one developer's venv path to the whole team -- and under `uvx` the
+  path points into a temporary environment that can be garbage-collected,
+  silently breaking the server later. It now writes a bare `python3` /
+  `python` resolved from PATH (the server is stdlib-only, so any 3.8+
+  interpreter runs it).
+- Installer output could print out of order when piped, because stdout was
+  not flushed before the hook/MCP wiring subprocesses ran.
+
 ## [0.5.0] — 2026-09-16
 
 ### Added

@@ -37,6 +37,15 @@ AI assistant, and the notebook is a folder on your own machine, not a
 server anywhere. Nothing to install as a service, nothing to sign up for,
 no data leaving your computer.
 
+Try it in your project — one command, nothing left installed afterwards:
+
+```bash
+uvx --from git+https://github.com/sheikharfaz/agent-memory-kit amk init
+```
+
+Then `amk doctor` tells you whether it worked. More options in
+[Quick start](#quick-start).
+
 ## Who it's for
 
 - **Developers** who use an AI coding assistant daily and are tired of
@@ -64,6 +73,7 @@ no data leaving your computer.
 | **Python 3.8 or newer** | The only hard requirement. Every script is standard-library only — nothing to `pip install` for the core kit. |
 | **git** *(recommended, not required)* | Used to honour `.gitignore` and to power diff-based features (`query.py changed`, `dev-recap`'s `gaps`). Without it, indexing still works via a plain filesystem walk — you just lose those git-aware features. |
 | **Any OS** | macOS, Linux, or Windows. On Windows, use `install.py` (or `py`/`python`) if your PowerShell execution policy blocks `.ps1` scripts — see [Quick start](#quick-start). |
+| **uv or pipx** *(optional)* | Only for the one-command install. Without them, clone the repo and run `install.py` — same files, no package manager. |
 | **Claude Code** *(optional)* | Only needed for `session-memory`'s automatic hooks and the "new-hire" familiarity nudge. Everything else works by hand, or via any harness that reads `AGENTS.md` (GitHub Copilot, Cursor, Codex, Zed, …). |
 
 Nothing else. No API key, no account, no subscription, no server to stand
@@ -274,57 +284,77 @@ committed to both.
 
 ## Quick start
 
+One command, from inside your project. Nothing is cloned, nothing is piped
+into a shell, and nothing is left installed afterwards:
+
+```bash
+uvx --from git+https://github.com/sheikharfaz/agent-memory-kit amk init
+```
+
+Prefer a command that stays on your PATH?
+
+```bash
+pipx install git+https://github.com/sheikharfaz/agent-memory-kit
+amk init                 # install the kit here and build the index
+amk init --hooks --mcp   # also: cross-session recall in Claude Code, live tools for any MCP host
+```
+
+`amk init` copies the kit into the current repo, gitignores the two private
+paths (`.agent/memory/session/`, `.agent/work/`), and builds the index. Then
+check it:
+
+```console
+$ amk doctor
+agent-memory-kit doctor  ·  /home/you/project
+
+  PASS  python 3.12.4
+  PASS  git                  found
+  PASS  kit files            all 25 present
+  PASS  index                412 files, 3,180 symbols -- OK
+  PASS  privacy              .agent/memory/session/ is gitignored
+  PASS  claude code hooks    wired
+  PASS  mcp server           registered in .mcp.json
+  PASS  kit version          matches amk 0.6.0
+
+0 failure(s), 0 warning(s).
+```
+
+| Command | Does |
+|---|---|
+| `amk init [dir]` | Install or upgrade (`--force`) the kit, build the index |
+| `amk doctor [dir]` | One-screen health check; non-zero exit on any failure |
+| `amk find <plain words>` | Find a symbol without knowing its name |
+| `amk query <verb> …` | Any [query verb](#query-cli) |
+| `amk mcp` | Run the MCP server over stdio |
+
+The `amk` package itself has no runtime dependencies. Installing from git
+fetches one build-time tool (`hatchling`) from your package index, once.
+
+### No outbound GitHub or pip? Clone and copy
+
+Everything `amk init` does is also a plain file copy you can run from a
+checkout — the same file list, with no package manager involved:
+
 ```bash
 git clone https://github.com/sheikharfaz/agent-memory-kit.git
 cd /path/to/your/project
-bash /path/to/agent-memory-kit/install.sh .
-python .agent/skills/codebase-memory/index.py build
+python3 /path/to/agent-memory-kit/install.py . --wire-hooks --wire-mcp
+python3 .agent/skills/codebase-memory/index.py build
 ```
 
-Add `--wire-hooks` to also register `session-memory`'s Claude Code hooks
-(`bash /path/to/agent-memory-kit/install.sh . --wire-hooks`) — optional, and
-safe to run later once you've read [SETUP.md](SETUP.md).
+`install.sh` (bash) and `install.ps1` (PowerShell) do the same. On a Windows
+image whose execution policy is `Restricted` — common, and not something a
+non-admin can change — use `install.py`; it needs no script-execution policy.
 
-Windows PowerShell:
-
-```powershell
-git clone https://github.com/<you>/agent-memory-kit.git
-cd C:\path\to\your\project
-& C:\path\to\agent-memory-kit\install.ps1 .
-python .agent\skills\codebase-memory\index.py build
-```
-
-On a machine where PowerShell's execution policy is `Restricted` (common on
-locked-down corporate images, and not something a non-admin user can
-change), use the stdlib-only Python installer instead — same behaviour,
-needs no script-execution policy at all:
-
-```bash
-python3 /path/to/agent-memory-kit/install.py . --wire-hooks
-```
-
-Or copy the files by hand — that is all the installer does:
-
-```
-AGENTS.md                                       -> your repo root
-SETUP.md                                        -> your repo root
-SECURITY.md                                     -> your repo root (kit's threat model, for your AppSec reviewer)
-.github/copilot-instructions.md                 -> your repo
-.agent/skills/codebase-memory/SKILL.md          -> your repo
-.agent/skills/codebase-memory/index.py          -> your repo
-.agent/skills/codebase-memory/query.py          -> your repo
-.agent/skills/session-memory/                   -> your repo   (opt-in, see below)
-.agent/skills/tool-provisioning/                -> your repo   (opt-in, see below)
-.agent/skills/spec-first/                       -> your repo   (opt-in, see below)
-.agent/skills/dev-recap/                        -> your repo   (opt-in, see below)
-```
-
-Then add to your project's `.gitignore`:
+Or copy by hand; the complete list is `FILES` at the top of
+[`install.py`](install.py). The core is `AGENTS.md`, `.agent/lib/`, and
+`.agent/skills/codebase-memory/`; every other skill directory is optional.
+Then add to `.gitignore`:
 
 ```gitignore
 .agent/work/
-.agent/memory/session/   # session-memory's local log -- raw prompt/turn text, keep it local
-# .agent/memory/          <- uncomment the codebase map too if each developer should build their own index
+.agent/memory/session/   # session-memory's local log -- raw prompt text, keep it local
+# .agent/memory/          <- uncomment too if each developer should build their own index
 ```
 
 ---
@@ -722,11 +752,13 @@ and `.agent/work/`, zero third-party dependencies.
 
 ## Contributing
 
-Useful directions: better symbol patterns for under-served languages (the tables
-live at the top of `index.py`), additional query verbs, real-world reports of
-what the index misses on your codebase, and additional `tool-provisioning`
-registry entries for common needs. Open an issue with the language/tool, a
-small reproducer, and what was missing.
+The most useful contribution is a real **retrieval miss** — something
+`session-memory` or `amk find` should have surfaced and didn't. The eval
+dataset was written by the maintainers, which is its biggest weakness, and
+the *Retrieval miss* issue template collects exactly what `evals/` needs.
+After that: symbol patterns for under-served languages, and
+`tool-provisioning` registry entries. The constraints every change has to
+respect, and a PR checklist, are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

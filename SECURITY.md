@@ -24,6 +24,7 @@ under their own OS-level permissions.
 | `spec-first` (`spec_first.py`) | its own PRD.md/TRD.md files, `git` (none directly — reads via the agent's own tool use) | only `.agent/work/<task-slug>/` (the same directory RPI already used) | **none, ever** |
 | `mcp-bridge` (`server.py`) | whatever `codebase-memory`/`session-memory` already read, via subprocess | only what those two already write (`.agent/memory/graph/`, `CODEBASE_MAP.md`, `.agent/memory/session/`) — nothing new | **none, ever** |
 | `.agent/lib/retrieval.py` | nothing — a pure function library (tokenizer + BM25) called in-process | nothing | **none, ever** |
+| `amk` CLI (`agent_memory_kit/`) | the kit files bundled in its own package | the same files the installers copy, plus two lines appended to the project's `.gitignore` (`--no-gitignore` skips it) | **none at runtime**. Installing the package from git fetches its build tool (`hatchling`) from your package index once — the same trust decision as any `pip install` |
 
 Nothing here phones home, collects telemetry, or uploads anything by itself.
 Every network-capable action is either a command a human explicitly
@@ -64,9 +65,13 @@ verbs) were deliberately left out.
   that ledger, so it can't be talked into deleting something that predates
   it. `list-installed`/`sweep` surface anything left over from an
   interrupted task.
-- *Supply-chain surface of the kit itself.* Zero third-party dependencies —
-  nothing to audit in a lockfile, nothing that can be typosquatted upstream
-  of this repo.
+- *Supply-chain surface of the kit itself.* Zero third-party runtime
+  dependencies — nothing to audit in a lockfile. The one exception is
+  install-time and opt-in: installing the `amk` package from git
+  (`uvx`/`pipx`) makes your installer fetch the `hatchling` build backend
+  from your package index. The clone-and-copy installers involve no package
+  index at all, and the files they copy are byte-identical to what `amk`
+  bundles.
 
 **Explicitly out of scope:**
 - *What an approved install itself does.* If a developer approves

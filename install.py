@@ -55,6 +55,55 @@ FILES = [
 ]
 
 
+def is_kit_checkout(path):
+    """The kit's own repo, whether reached as SRC or from a wheel's payload."""
+    return all(os.path.exists(os.path.join(path, m))
+               for m in ("install.py", "VERSION", os.path.join("evals", "recall_eval.py")))
+
+
+def install(src, target, force=False, wire_hooks=False, wire_mcp=False, out=print):
+    """Copy FILES from `src` into `target`, optionally wiring hooks/MCP.
+    Returns (copied, skipped). Raises ValueError for an unusable target.
+    Importable so `amk init` (agent_memory_kit/cli.py) installs exactly this
+    file set -- FILES stays the single source of truth."""
+    target = os.path.abspath(target)
+    if not os.path.isdir(target):
+        raise ValueError("'%s' is not a directory" % target)
+    if os.path.abspath(src) == target or is_kit_checkout(target):
+        raise ValueError("target is the kit itself; pass your project directory")
+
+    copied, skipped = 0, 0
+    for rel in FILES:
+        rel = rel.replace("/", os.sep)
+        dest = os.path.join(target, rel)
+        if os.path.exists(dest) and not force:
+            out("  skip     %s (exists; use --force to overwrite)" % rel)
+            skipped += 1
+            continue
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        shutil.copy2(os.path.join(src, rel), dest)
+        out("  install  %s" % rel)
+        copied += 1
+
+    out("")
+    out("%d file(s) installed, %d skipped." % (copied, skipped))
+
+    if wire_hooks:
+        out("")
+        out("Wiring session-memory hooks into %s ..." % os.path.join(target, ".claude", "settings.json"))
+        sys.stdout.flush()
+        wire_script = os.path.join(src, ".agent", "skills", "session-memory", "wire_hooks.py")
+        subprocess.run([sys.executable, wire_script, target], check=False)
+
+    if wire_mcp:
+        out("")
+        out("Wiring mcp-bridge into %s ..." % os.path.join(target, ".mcp.json"))
+        sys.stdout.flush()
+        wire_script = os.path.join(src, ".agent", "skills", "mcp-bridge", "wire_mcp.py")
+        subprocess.run([sys.executable, wire_script, target], check=False)
+    return copied, skipped
+
+
 def main():
     p = argparse.ArgumentParser(description="Install agent-memory-kit into a target repo.")
     p.add_argument("target", help="target repository directory")
@@ -65,42 +114,12 @@ def main():
                     help="also register the mcp-bridge server in .mcp.json")
     args = p.parse_args()
 
+    try:
+        install(SRC, args.target, args.force, args.wire_hooks, args.wire_mcp)
+    except ValueError as exc:
+        sys.stderr.write("error: %s\n" % exc)
+        sys.exit(2)
     target = os.path.abspath(args.target)
-    if not os.path.isdir(target):
-        sys.stderr.write("error: '%s' is not a directory\n" % args.target)
-        sys.exit(2)
-    if target == SRC:
-        sys.stderr.write("error: target is the kit itself; pass your project directory\n")
-        sys.exit(2)
-
-    copied, skipped = 0, 0
-    for rel in FILES:
-        rel = rel.replace("/", os.sep)
-        src = os.path.join(SRC, rel)
-        dest = os.path.join(target, rel)
-        if os.path.exists(dest) and not args.force:
-            print("  skip     %s (exists; use --force to overwrite)" % rel)
-            skipped += 1
-            continue
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-        shutil.copy2(src, dest)
-        print("  install  %s" % rel)
-        copied += 1
-
-    print()
-    print("%d file(s) installed, %d skipped." % (copied, skipped))
-
-    if args.wire_hooks:
-        print()
-        print("Wiring session-memory hooks into %s ..." % os.path.join(target, ".claude", "settings.json"))
-        wire_script = os.path.join(SRC, ".agent", "skills", "session-memory", "wire_hooks.py")
-        subprocess.run([sys.executable, wire_script, target], check=False)
-
-    if args.wire_mcp:
-        print()
-        print("Wiring mcp-bridge into %s ..." % os.path.join(target, ".mcp.json"))
-        wire_script = os.path.join(SRC, ".agent", "skills", "mcp-bridge", "wire_mcp.py")
-        subprocess.run([sys.executable, wire_script, target], check=False)
 
     print()
     print("Next:")

@@ -5,6 +5,17 @@ service, no network. An MCP server is included but stays opt-in -- see
 step 10 -- and even then it is a local stdio process this kit starts
 itself, not a hosted service. Requires Python 3.8+ and, ideally, git.
 
+## 0. Or skip all of this
+
+```bash
+uvx --from git+https://github.com/sheikharfaz/agent-memory-kit amk init --hooks --mcp
+amk doctor   # after `pipx install git+https://github.com/sheikharfaz/agent-memory-kit`
+```
+
+`amk init` performs steps 1, 2, 6 and 10 below (and the `.gitignore` half
+of step 3) in one go. The rest of this page is the manual path, for machines
+without outbound GitHub or pip, and the reference for what `amk` does.
+
 ## 1. Copy these into the repo root
 
 ```
