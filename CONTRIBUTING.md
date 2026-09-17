@@ -11,8 +11,11 @@ matter how good it is otherwise.
    have them work. (Build-time tooling for the wheel is fine.)
 2. **No network calls** except the ones a human explicitly approves
    (`tool-provisioning` installs, `sync-org-registry`). No telemetry, ever.
-3. **No writes outside `.agent/`** in a target repo — plus `.gitignore`,
-   `.mcp.json` and `.claude/settings.json` only when the user asked for it.
+3. **No writes outside `.agent/`** in a target repo — except the
+   installer-owned ones: `AGENTS.md` and the other copied docs, one import
+   line in `CLAUDE.md`, two lines in `.gitignore`, and `.mcp.json` /
+   `.claude/settings.json` when the user asked for them. Each has an
+   opt-out.
 4. **Measured, not asserted.** A change that claims to make recall or the
    index better comes with a number from `evals/` or `benchmarks/`, and
    publishes what still fails. A change that makes a number worse says so.

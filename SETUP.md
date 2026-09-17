@@ -12,8 +12,8 @@ uvx agent-memory-kit-cli init --hooks --mcp
 uvx agent-memory-kit-cli doctor   # with `pipx install agent-memory-kit-cli`, just `amk doctor`
 ```
 
-`amk init` performs steps 1, 2, 6 and 10 below (and the `.gitignore` half
-of step 3) in one go. The rest of this page is the manual path, for machines
+`amk init` performs steps 1, 2, 4 (the Claude Code part), 6 and 10 below,
+and the `.gitignore` half of step 3, in one go. The rest of this page is the manual path, for machines
 without outbound GitHub or pip, and the reference for what `amk` does.
 
 ## 1. Copy these into the repo root
@@ -83,7 +83,21 @@ docs/legacy/**
 generated/
 ```
 
-## 4. Wire it into Copilot
+## 4. Wire it into your agent
+
+**Claude Code** reads `CLAUDE.md`, not `AGENTS.md`. Add one import line so
+it loads the contract (`amk init` and `install.py --wire-hooks` do this for
+you):
+
+```markdown
+<!-- CLAUDE.md -->
+@AGENTS.md
+```
+
+Run `/context` in a Claude Code session and check that `CLAUDE.md` appears
+under **Memory files**.
+
+**Copilot:**
 
 VS Code Copilot reads `.github/copilot-instructions.md` automatically, and
 recent versions also read `AGENTS.md`. The Copilot file is a thin pointer, so

@@ -88,7 +88,7 @@ command in this repo:
 | **git** *(recommended, not required)* | Used to honour `.gitignore` and to power diff-based features (`query.py changed`, `dev-recap`'s `gaps`). Without it, indexing still works via a plain filesystem walk — you just lose those git-aware features. |
 | **Any OS** | macOS, Linux, or Windows. On Windows, use `install.py` (or `py`/`python`) if your PowerShell execution policy blocks `.ps1` scripts — see [Quick start](#quick-start). |
 | **uv, pipx or pip** *(optional)* | Only for the one-command install (`agent-memory-kit-cli` on PyPI). Without them, clone the repo and run `install.py` — same files, no package manager. |
-| **Claude Code** *(optional)* | Only needed for `session-memory`'s automatic hooks and the "new-hire" familiarity nudge. Everything else works by hand, or via any harness that reads `AGENTS.md` (GitHub Copilot, Cursor, Codex, Zed, …). |
+| **Claude Code** *(optional)* | Only needed for `session-memory`'s automatic hooks and the "new-hire" familiarity nudge. Everything else works by hand, or via any agent that reads `AGENTS.md` (GitHub Copilot, Cursor, Codex, …) — Claude Code included, through the `@AGENTS.md` import in `CLAUDE.md` that `amk init` adds. |
 
 Nothing else. No API key, no account, no subscription, no server to stand
 up, no admin/root access at any point.
@@ -347,7 +347,7 @@ amk init --hooks --mcp   # also: cross-session recall in Claude Code, live tools
 ```
 
 Straight from GitHub instead of PyPI, pinned to a release:
-`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.3 amk init`.
+`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.4 amk init`.
 
 `init` copies the kit into the current repo, gitignores the two private
 paths (`.agent/memory/session/`, `.agent/work/`), builds the index, and
@@ -359,13 +359,14 @@ $ uvx agent-memory-kit-cli doctor
 agent-memory-kit doctor  ·  /home/you/project
 
   PASS  python 3.12.4
-  PASS  git                  found
-  PASS  kit files            all 25 present
-  PASS  index                412 files, 3,180 symbols -- OK
-  PASS  privacy              .agent/memory/session/ is gitignored
-  PASS  claude code hooks    wired
-  PASS  mcp server           registered in .mcp.json
-  PASS  kit version          matches amk 0.6.3
+  PASS  git                   found
+  PASS  kit files             all 25 present
+  PASS  index                 412 files, 3,180 symbols -- OK
+  PASS  privacy               .agent/memory/session/ is gitignored
+  PASS  claude code hooks     wired
+  PASS  claude code contract  CLAUDE.md loads AGENTS.md
+  PASS  mcp server            registered in .mcp.json
+  PASS  kit version           matches amk 0.6.4
 
 0 failure(s), 0 warning(s).
 ```
@@ -715,10 +716,14 @@ wouldn't earn its complexity. Output is sorted and deterministic, so committing
 
 ## Compatibility
 
-`AGENTS.md` and `codebase-memory` are read by GitHub Copilot (recent VS Code),
-Claude Code, Codex, Cursor, Zed, and most agent harnesses.
-`.github/copilot-instructions.md` is a thin pointer at the same contract so
-Copilot picks it up either way — you maintain one file, not two.
+`AGENTS.md` is read directly by Codex, Cursor, recent GitHub Copilot, and
+many other agent harnesses. **Claude Code is the exception: it reads
+`CLAUDE.md`, not `AGENTS.md`.** So `amk init` (and `install.py --wire-hooks`)
+adds an `@AGENTS.md` import line to your `CLAUDE.md` — creating it if needed,
+appending if you already have one — which is the pattern Claude Code's own
+docs recommend. `amk doctor` checks it. `.github/copilot-instructions.md` is
+a thin pointer at the same contract, so Copilot picks it up either way. You
+maintain one contract, not three.
 
 `session-memory`'s automatic behaviour (the hooks, and the familiarity nudge
 riding on `SessionStart`) is Claude-Code-specific — that harness is what

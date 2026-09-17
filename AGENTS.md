@@ -2,7 +2,8 @@
 
 Operating contract for any AI coding agent working in this repository.
 Applies to GitHub Copilot (agent mode), Claude Code, Codex, Cursor, and anything
-else that reads `AGENTS.md`.
+else that reads `AGENTS.md`. (Claude Code reads it through the `@AGENTS.md`
+import in `CLAUDE.md` that `amk init` adds.)
 
 This file is loaded on every turn, so it stays under ~5k tokens even with six
 skills' worth of contract folded in. Detail lives in skills under

@@ -199,6 +199,84 @@ class TestVersion(unittest.TestCase):
         self.assertIn("init", r.stdout)
 
 
+class TestClaudeMd(TempProject):
+    """Claude Code reads CLAUDE.md, not AGENTS.md. Without an @AGENTS.md
+    import, the kit's contract never reaches Claude Code at all."""
+
+    def claude_md(self):
+        with open(self.path("CLAUDE.md"), encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_init_creates_claude_md_importing_agents_md(self):
+        r = amk("init", self.repo, "--no-build")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("@AGENTS.md", self.claude_md().splitlines())
+        self.assertIn("created CLAUDE.md", r.stdout)
+
+    def test_existing_claude_md_is_appended_to_and_kept(self):
+        with open(self.path("CLAUDE.md"), "w", encoding="utf-8") as fh:
+            fh.write("# House rules\nUse pnpm.")  # no trailing newline
+        amk("init", self.repo, "--no-build")
+        lines = self.claude_md().splitlines()
+        self.assertEqual(lines[:2], ["# House rules", "Use pnpm."])
+        self.assertIn("@AGENTS.md", lines)
+
+    def test_idempotent_with_and_without_hooks(self):
+        amk("init", self.repo, "--no-build")
+        amk("init", self.repo, "--no-build", "--hooks")
+        amk("init", self.repo, "--no-build")
+        self.assertEqual(self.claude_md().count("@AGENTS.md"), 1)
+
+    def test_nested_claude_md_is_used_when_it_is_the_only_one(self):
+        os.makedirs(self.path(".claude"))
+        with open(self.path(".claude", "CLAUDE.md"), "w", encoding="utf-8") as fh:
+            fh.write("existing\n")
+        amk("init", self.repo, "--no-build")
+        self.assertFalse(os.path.exists(self.path("CLAUDE.md")))
+        with open(self.path(".claude", "CLAUDE.md"), encoding="utf-8") as fh:
+            self.assertIn("@AGENTS.md", fh.read())
+
+    def test_opt_out_leaves_no_claude_md(self):
+        amk("init", self.repo, "--no-build", "--hooks", "--no-claude-md")
+        self.assertFalse(os.path.exists(self.path("CLAUDE.md")))
+
+    @unittest.skipIf(os.name == "nt", "symlinks need extra privileges on Windows")
+    def test_symlink_to_agents_md_counts_as_wired(self):
+        amk("init", self.repo, "--no-build", "--no-claude-md")
+        os.symlink("AGENTS.md", self.path("CLAUDE.md"))
+        before = open(self.path("AGENTS.md"), encoding="utf-8").read()
+        r = amk("init", self.repo, "--no-build")
+        self.assertIn("already loads", r.stdout)
+        self.assertEqual(open(self.path("AGENTS.md"), encoding="utf-8").read(), before)
+
+    @unittest.skipIf(os.name == "nt", "symlinks need extra privileges on Windows")
+    def test_symlink_to_another_file_is_not_written_through(self):
+        with open(self.path("NOTES.md"), "w", encoding="utf-8") as fh:
+            fh.write("team notes\n")
+        os.symlink("NOTES.md", self.path("CLAUDE.md"))
+        r = amk("init", self.repo, "--no-build")
+        self.assertIn("left it alone", r.stdout)
+        with open(self.path("NOTES.md"), encoding="utf-8") as fh:
+            self.assertEqual(fh.read(), "team notes\n")
+
+    def test_doctor_warns_when_hooks_are_wired_but_contract_is_not(self):
+        amk("init", self.repo, "--hooks", "--no-claude-md")
+        r = amk("doctor", self.repo)
+        self.assertEqual(r.returncode, 0)
+        self.assertRegex(r.stdout, r"WARN\s+claude code contract")
+
+    def test_doctor_passes_when_wired(self):
+        amk("init", self.repo, "--hooks")
+        r = amk("doctor", self.repo)
+        self.assertRegex(r.stdout, r"PASS\s+claude code contract")
+
+    def test_legacy_installer_wires_it_with_hooks(self):
+        r = subprocess.run([sys.executable, os.path.join(KIT_ROOT, "install.py"),
+                            self.repo, "--wire-hooks"], capture_output=True, text=True, timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("@AGENTS.md", self.claude_md())
+
+
 class TestCommandPrefix(unittest.TestCase):
     """Under `uvx` the `amk` command vanishes when the process exits, so the
     printed next steps must say `uvx agent-memory-kit-cli ...` there."""

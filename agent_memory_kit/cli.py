@@ -52,6 +52,14 @@ def load_installer():
     return mod
 
 
+def load_wire_hooks():
+    path = os.path.join(payload_dir(), ".agent", "skills", "session-memory", "wire_hooks.py")
+    spec = importlib.util.spec_from_file_location("amk_wire_hooks", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def version():
     try:
         with open(os.path.join(payload_dir(), "VERSION"), encoding="utf-8") as fh:
@@ -113,10 +121,16 @@ def cmd_init(args):
     installer = load_installer()
     try:
         installer.install(payload_dir(), target, force=args.force,
-                          wire_hooks=args.hooks, wire_mcp=args.mcp)
+                          wire_hooks=args.hooks, wire_mcp=args.mcp,
+                          claude_md=not args.no_claude_md)
     except ValueError as exc:
         print("amk init: %s" % exc, file=sys.stderr)
         return 2
+
+    if not args.no_claude_md and not args.hooks:
+        # with --hooks, wire_hooks.py already did this and said so
+        wh = load_wire_hooks()
+        print("\n" + wh.CLAUDE_MD_MESSAGES[wh.wire_claude_md(target)])
 
     if not args.no_gitignore:
         added = _ensure_gitignore(target)
@@ -202,6 +216,14 @@ def cmd_doctor(args):
     _check(results, "PASS" if hooks else "INFO", "claude code hooks",
            "wired" if hooks else "not wired (optional) -- `amk init --hooks`")
 
+    wh = load_wire_hooks()
+    if wh.claude_md_imports_agents(target):
+        _check(results, "PASS", "claude code contract", "CLAUDE.md loads AGENTS.md")
+    else:
+        _check(results, "WARN" if hooks else "INFO", "claude code contract",
+               "CLAUDE.md doesn't import AGENTS.md, so Claude Code won't load the contract "
+               "-- run init again, or add `@AGENTS.md` to CLAUDE.md")
+
     mcp_path = os.path.join(target, ".mcp.json")
     mcp = False
     if os.path.exists(mcp_path):
@@ -227,7 +249,7 @@ def cmd_doctor(args):
     print("agent-memory-kit doctor  ·  %s" % target)
     print()
     for status, label, detail in results:
-        print("  %-4s  %-20s %s" % (status, label, detail))
+        print("  %-4s  %-21s %s" % (status, label, detail))
     fails = sum(1 for s, _, _ in results if s == "FAIL")
     warns = sum(1 for s, _, _ in results if s == "WARN")
     print()
@@ -271,6 +293,8 @@ def main(argv=None):
     i.add_argument("--force", action="store_true", help="overwrite existing kit files (upgrade)")
     i.add_argument("--no-build", action="store_true", help="skip building the index")
     i.add_argument("--no-gitignore", action="store_true", help="leave .gitignore untouched")
+    i.add_argument("--no-claude-md", action="store_true",
+                   help="don't add @AGENTS.md to CLAUDE.md (Claude Code won't load the contract)")
     d = sub.add_parser("doctor", help="check an install is healthy")
     d.add_argument("dir", nargs="?", default=".")
     sub.add_parser("find", help="find symbols by plain words (passes through to query.py)")

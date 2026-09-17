@@ -61,7 +61,8 @@ def is_kit_checkout(path):
                for m in ("install.py", "VERSION", os.path.join("evals", "recall_eval.py")))
 
 
-def install(src, target, force=False, wire_hooks=False, wire_mcp=False, out=print):
+def install(src, target, force=False, wire_hooks=False, wire_mcp=False, out=print,
+            claude_md=True):
     """Copy FILES from `src` into `target`, optionally wiring hooks/MCP.
     Returns (copied, skipped). Raises ValueError for an unusable target.
     Importable so `amk init` (agent_memory_kit/cli.py) installs exactly this
@@ -93,7 +94,8 @@ def install(src, target, force=False, wire_hooks=False, wire_mcp=False, out=prin
         out("Wiring session-memory hooks into %s ..." % os.path.join(target, ".claude", "settings.json"))
         sys.stdout.flush()
         wire_script = os.path.join(src, ".agent", "skills", "session-memory", "wire_hooks.py")
-        subprocess.run([sys.executable, wire_script, target], check=False)
+        extra = [] if claude_md else ["--no-claude-md"]
+        subprocess.run([sys.executable, wire_script, target] + extra, check=False)
 
     if wire_mcp:
         out("")
@@ -112,10 +114,13 @@ def main():
                     help="also merge session-memory hooks into .claude/settings.json")
     p.add_argument("--wire-mcp", action="store_true",
                     help="also register the mcp-bridge server in .mcp.json")
+    p.add_argument("--no-claude-md", action="store_true",
+                    help="with --wire-hooks, don't add @AGENTS.md to CLAUDE.md")
     args = p.parse_args()
 
     try:
-        install(SRC, args.target, args.force, args.wire_hooks, args.wire_mcp)
+        install(SRC, args.target, args.force, args.wire_hooks, args.wire_mcp,
+                claude_md=not args.no_claude_md)
     except ValueError as exc:
         sys.stderr.write("error: %s\n" % exc)
         sys.exit(2)

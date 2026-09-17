@@ -16,8 +16,8 @@ convention required.
 
 ## Why this exists
 
-`AGENTS.md` already travels across tools -- it is plain markdown any agent
-can read. But `session-memory`'s cross-session recall only *activates*
+`AGENTS.md` already travels across tools -- it is plain markdown most agents
+read directly (Claude Code via an `@AGENTS.md` import in `CLAUDE.md`). But `session-memory`'s cross-session recall only *activates*
 automatically inside Claude Code, because it rides Claude Code's specific
 hook events. A developer using Cursor, Claude Desktop, or a custom agent
 built on the Claude Agent SDK gets none of that unless they read this

@@ -2,11 +2,28 @@
 
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/). A
 release is a tagged commit. Pin one with
-`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.1 amk init`,
+`uvx --from git+https://github.com/sheikharfaz/agent-memory-kit@v0.6.4 amk init`,
 or point an internal mirror or golden image at the tag — see
 [SETUP.md](SETUP.md).
 
 ## [Unreleased]
+
+## [0.6.4] — 2026-09-17
+
+### Fixed
+- **Claude Code never loaded the kit's contract.** Claude Code reads
+  `CLAUDE.md`, not `AGENTS.md` (its docs say so directly), and nothing in the
+  kit connected the two. Claude Code users got the hooks and the MCP tools,
+  but not the instructions that tell the agent to read the code map, cite
+  evidence, write a spec first, and ask before installing. `amk init` now
+  adds an `@AGENTS.md` import to `CLAUDE.md` — creating the file if needed,
+  appending if you already have one, leaving a `CLAUDE.md` that links
+  elsewhere untouched — which is the pattern Claude Code's docs recommend.
+  `install.py|.sh|.ps1 --wire-hooks` do the same; `--no-claude-md` opts out.
+  `amk doctor` gains a "claude code contract" check (a warning when the
+  hooks are wired but the import is missing).
+- The README said Claude Code reads `AGENTS.md`. It doesn't; the
+  compatibility section now says how Claude Code gets it.
 
 ## [0.6.3] — 2026-09-17
 
